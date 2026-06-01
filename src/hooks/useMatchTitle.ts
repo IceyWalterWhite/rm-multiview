@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MatchTitle } from '../types';
 import { fetchMatchTitle } from '../data/match';
 
@@ -14,15 +14,13 @@ export function useMatchTitle(
   pollMs: number = POLL_MS,
 ): MatchTitle | null {
   const [title, setTitle] = useState<MatchTitle | null>(null);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher; // 始终用最新 fetcher，但不进 effect 依赖
 
   useEffect(() => {
     let alive = true;
     setTitle(null); // 切赛区先清空，避免串味（稳态下本 effect 只在挂载时跑一次）
     const tick = async () => {
       try {
-        const t = await fetcherRef.current(zoneName);
+        const t = await fetcher(zoneName);
         if (alive) setTitle(t); // 成功：有值则用，null 则回兜底
       } catch {
         /* 网络错误：保留上次好值 */
@@ -31,7 +29,7 @@ export function useMatchTitle(
     tick();
     const id = setInterval(tick, pollMs);
     return () => { alive = false; clearInterval(id); };
-  }, [zoneName, pollMs]);
+  }, [zoneName, fetcher, pollMs]);
 
   return title;
 }
