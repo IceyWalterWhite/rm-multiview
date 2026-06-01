@@ -20,8 +20,9 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
     const el = textRef.current;
     if (!container || !el) return;
 
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
+    const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null; } };
 
     const reset = () => {
       el.style.transitionDuration = '0s';
@@ -34,19 +35,19 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
       const overflow = el.scrollWidth - container.clientWidth;
       if (overflow <= 0) return; // 不溢出不滚
       const durMs = (overflow / SPEED_PX_PER_S) * 1000;
-      timers.push(setTimeout(() => {
+      timer = setTimeout(() => {
         if (cancelled) return;
         el.style.transitionDuration = `${durMs}ms`;
         el.style.transform = `translateX(-${overflow}px)`; // 滑到露出末尾
-        timers.push(setTimeout(() => {
+        timer = setTimeout(() => {
           if (cancelled) return;
-          reset();                                   // 瞬时弹回开头
-          timers.push(setTimeout(run, PAUSE_MS));    // 停顿后再循环
-        }, durMs + PAUSE_MS));
-      }, PAUSE_MS));
+          reset();                              // 瞬时弹回开头
+          timer = setTimeout(run, PAUSE_MS);    // 停顿后再循环
+        }, durMs + PAUSE_MS);
+      }, PAUSE_MS);
     };
 
-    const restart = () => { timers.forEach(clearTimeout); timers.length = 0; run(); };
+    const restart = () => { clear(); run(); };
     run();
 
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(restart) : null;
@@ -54,7 +55,7 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
 
     return () => {
       cancelled = true;
-      timers.forEach(clearTimeout);
+      clear();
       ro?.disconnect();
       reset(); // 等价官方 clearScrollState
     };
