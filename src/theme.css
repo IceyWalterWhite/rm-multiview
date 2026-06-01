@@ -30,7 +30,8 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui,
 /* 视频容器：填满机位/主视角框，承载重试占位浮层 */
 .video-wrap { position:absolute; inset:0; }
 .video-retry { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; background:rgba(0,0,0,.5); color:#cfd3d8; font-size:12px; letter-spacing:.5px; }
-.main-res { position:absolute; top:6px; left:8px; z-index:5; font-size:12px; color:var(--accent); background:rgba(0,0,0,.5); padding:1px 8px; border-radius:4px; }
+.match-title { position:absolute; top:6px; left:8px; z-index:5; max-width:calc(100% - 130px); overflow:hidden; white-space:nowrap; box-sizing:border-box; font-size:12px; color:var(--accent); background:rgba(0,0,0,.5); padding:1px 8px; border-radius:4px; }
+.match-title__text { display:inline-block; transition: transform 0s linear; will-change:transform; }
 
 .controls { display:flex; gap:10px; align-items:center; flex:none; flex-wrap:wrap; }
 .pill { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:13px; }

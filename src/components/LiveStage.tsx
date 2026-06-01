@@ -5,6 +5,7 @@ import { SideColumn } from './SideColumn';
 import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
 import { DanmakuComposer } from './DanmakuComposer';
+import { useMatchTitle } from '../hooks/useMatchTitle';
 
 interface Props {
   catalog: ZoneCatalog;
@@ -28,6 +29,7 @@ export function LiveStage(p: Props) {
   const rowRef = useRef<HTMLDivElement>(null);
   const toggleRed = (id: string) => setEnlargedRed((cur) => (cur === id ? null : id));
   const toggleBlue = (id: string) => setEnlargedBlue((cur) => (cur === id ? null : id));
+  const matchTitle = useMatchTitle(p.catalog.zoneName);
 
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
   useEffect(() => {
@@ -48,7 +50,7 @@ export function LiveStage(p: Props) {
     <section className="live-stage">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} messages={p.messages} onSignatureExpired={p.onSignatureExpired} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} zoneName={p.catalog.zoneName} matchTitle={matchTitle} messages={p.messages} onSignatureExpired={p.onSignatureExpired} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
