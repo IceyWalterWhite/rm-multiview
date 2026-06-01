@@ -32,7 +32,10 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
     const run = () => {
       if (cancelled) return;
       reset();
-      const overflow = el.scrollWidth - container.clientWidth;
+      // 容器有左右内边距，clientWidth 含 padding；要滚到完整露出末尾，溢出量须对照「内容区」宽度
+      const cs = getComputedStyle(container);
+      const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      const overflow = el.scrollWidth - (container.clientWidth - padX);
       if (overflow <= 0) return; // 不溢出不滚
       const durMs = (overflow / SPEED_PX_PER_S) * 1000;
       timer = setTimeout(() => {
