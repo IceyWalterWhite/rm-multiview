@@ -23,19 +23,19 @@ describe('messageToDanmaku', () => {
 
 describe('identityTag', () => {
   it('shows "N年{position}" when racingAge>0', () => {
-    expect(identityTag({ racingAge: 2, position: '老队员' } as any)).toBe('2年老队员');
+    expect(identityTag({ racingAge: 2, position: '老队员' })).toBe('2年老队员');
   });
   it('shows only position when racingAge is 0', () => {
-    expect(identityTag({ racingAge: 0, position: '校友' } as any)).toBe('校友');
+    expect(identityTag({ racingAge: 0, position: '校友' })).toBe('校友');
   });
 });
 
 describe('danmakuColor', () => {
   it('veteran (老队员) is gold', () => {
-    expect(danmakuColor({ position: '老队员' } as any)).toBe(COLOR_VETERAN);
+    expect(danmakuColor({ position: '老队员' })).toBe(COLOR_VETERAN);
   });
   it('队员/校友 are common red', () => {
-    expect(danmakuColor({ position: '队员' } as any)).toBe(COLOR_COMMON);
-    expect(danmakuColor({ position: '校友' } as any)).toBe(COLOR_COMMON);
+    expect(danmakuColor({ position: '队员' })).toBe(COLOR_COMMON);
+    expect(danmakuColor({ position: '校友' })).toBe(COLOR_COMMON);
   });
 });

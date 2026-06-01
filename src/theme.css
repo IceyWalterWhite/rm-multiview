@@ -30,10 +30,13 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui,
 /* 视频容器：填满机位/主视角框，承载重试占位浮层 */
 .video-wrap { position:absolute; inset:0; }
 .video-retry { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; background:rgba(0,0,0,.5); color:#cfd3d8; font-size:12px; letter-spacing:.5px; }
-/* 130px ≈ 右上静音键最宽态(🔇 点击开启声音 ~114px) + right:8px + 余量，给标题让位 */
-.match-title { position:absolute; top:6px; left:8px; z-index:5; max-width:calc(100% - 130px); overflow:hidden; white-space:nowrap; box-sizing:border-box; font-size:12px; color:var(--accent); background:rgba(0,0,0,.5); padding:1px 8px; border-radius:4px; }
-/* transition 基态为 0s；滚动时由 MatchTitleBar 用 JS 覆写 transitionDuration 驱动 */
-.match-title__text { display:inline-block; transition: transform 0s linear; will-change:transform; }
+/* 48px ≈ 右上静音图标按钮宽度 + right:8px + 余量，避免声音状态切换改变标题可视宽度 */
+.match-title { position:absolute; top:6px; left:8px; z-index:5; max-width:calc(100% - 48px); overflow:hidden; white-space:nowrap; box-sizing:border-box; font-size:12px; color:var(--accent); background:rgba(0,0,0,.5); padding:1px 8px; border-radius:4px; }
+/* 循环滚动场次标题：两份文本拼接，移动 -50% 无缝回到起点 */
+.match-title__text { display:inline-block; }
+.match-title__scroll { display:inline-flex; width:max-content; animation-name: match-title-marquee; animation-timing-function:linear; animation-iteration-count:infinite; will-change:transform; }
+.match-title__seg { flex:none; padding-right:36px; }
+@keyframes match-title-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 
 .controls { display:flex; gap:10px; align-items:center; flex:none; flex-wrap:wrap; }
 .pill { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:13px; }
@@ -46,7 +49,7 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui,
 .composer-row { display:flex; align-items:center; gap:6px; min-width:0; }
 .id-chip { background:#16202e; border:1px solid var(--line); border-radius:5px; color:#cfe3ff; font-size:12px; padding:3px 8px; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
 /* 真·十周年徽章（原站 CSS 背景图，22x22 contain） */
-.chip-badge,.msg-badge { width:18px; height:18px; background:url("https://rm-static.djicdn.com/documents/73177/f6d5917aea9f21741087685960555448.png") center/contain no-repeat; display:inline-block; flex:none; }
+.chip-badge,.msg-badge { width:18px; height:18px; background:url("/badge-10th.png") center/contain no-repeat; display:inline-block; flex:none; }
 .composer-input { flex:1; min-width:0; background:transparent; border:none; color:var(--ink); font-size:14px; outline:none; }
 .send-btn { background:var(--accent); color:#1a1a1a; font-weight:700; border:none; border-radius:5px; padding:5px 14px; cursor:pointer; }
 .hint { color:#9aa0a6; font-size:12px; }
@@ -81,8 +84,9 @@ body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui,
 .id-editor input,.id-editor select { background:#0f141c; border:1px solid var(--line); color:var(--ink); border-radius:5px; padding:4px 6px; }
 .id-editor-actions { display:flex; justify-content:flex-end; gap:8px; }
 .id-editor .primary { background:var(--accent); color:#1a1a1a; font-weight:700; border:none; border-radius:5px; padding:5px 12px; }
-.loading,.fatal { padding:40px; text-align:center; color:#9aa0a6; }
+.loading,.fatal { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px; text-align:center; color:var(--accent); font-size:20px; font-weight:700; letter-spacing:1px; }
 .conn-status { background:#3a2a00; color:var(--accent); text-align:center; padding:4px; font-size:12px; }
 .composer-error { color:#ff8a8a; font-size:11px; margin-left:6px; }
 .id-hint { color: #9aa0a6; font-size: 11px; }
-.mute-btn { position:absolute; top:6px; right:8px; z-index:6; font-size:11px; background:rgba(0,0,0,.55); color:var(--accent); border:1px solid var(--line); border-radius:5px; padding:2px 8px; cursor:pointer; }
+/* 静音键只占图标宽度，不挤占标题空间 */
+.mute-btn { position:absolute; top:6px; right:8px; z-index:6; font-size:16px; background:rgba(0,0,0,.55); color:var(--accent); border:1px solid var(--line); border-radius:5px; padding:2px 6px; cursor:pointer; line-height:1; }

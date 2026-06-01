@@ -40,6 +40,6 @@ export interface ZoneCatalog {
 }
 
 export interface MatchTitle {
-  text: string;     // 拼好的标题，如 "超级对抗赛 北部赛区 第68场 东北大学 TDT vs 山东理工大学 齐奇"
+  text: string;     // 拼好的标题，如 "超级对抗赛 北部赛区 第68场 A大学 Alpha vs B大学 Beta"
   isNext: boolean;  // true = 用的是 nextMatch（下一场预告），由组件加「下一场 」前缀
 }

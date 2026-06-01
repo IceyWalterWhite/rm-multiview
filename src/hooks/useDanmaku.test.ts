@@ -53,7 +53,7 @@ describe('useDanmaku', () => {
     const { conn } = fakeConn();
     const { result } = renderHook(() => useDanmaku(async () => conn));
     await waitFor(() => expect(result.current.connected).toBe(true));
-    await act(async () => { await result.current.send('我发的', { nickname: '强强', schoolName: '清华大学', position: '校友', racingAge: 0, badge: '' }); });
+    await act(async () => { await result.current.send('我发的', { nickname: 'UserA', schoolName: 'A大学', position: '校友', racingAge: 0, badge: '' }); });
     expect(result.current.messages.at(-1)?.text).toBe('我发的');
   });
 });

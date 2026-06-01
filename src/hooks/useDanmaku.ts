@@ -6,6 +6,13 @@ import { connectDanmaku, type DanmakuConnection, type DanmakuStatus } from '../n
 
 type ConnFactory = () => Promise<DanmakuConnection>;
 
+const RETRY_BASE_MS = 500;
+const RETRY_MAX_MS = 10000;
+
+function retryDelayMs(attempt: number): number {
+  return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** attempt);
+}
+
 export function useDanmaku(connect: ConnFactory) {
   const [messages, setMessages] = useState<Danmaku[]>([]);
   const [status, setStatus] = useState<DanmakuStatus>('connecting');
@@ -21,14 +28,38 @@ export function useDanmaku(connect: ConnFactory) {
 
   useEffect(() => {
     let alive = true;
-    connect().then((conn) => {
-      if (!alive) { conn.close(); return; }
-      connRef.current = conn;
-      conn.onMessage((m) => push(messageToDanmaku(m.id, m.text, m.attrs)));
-      conn.onStatus((s) => { if (alive) setStatus(s); });
-      setStatus('connected');
-    }).catch((e) => { console.error('[useDanmaku] connect failed', e); /* 保持 'connecting'：初次失败无自动重试路径 */ });
-    return () => { alive = false; connRef.current?.close(); };
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearRetry = () => {
+      if (retryTimer !== null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+    };
+
+    const attemptConnect = (attempt: number) => {
+      connect().then((conn) => {
+        if (!alive) { void conn.close(); return; }
+        clearRetry();
+        connRef.current = conn;
+        conn.onMessage((m) => push(messageToDanmaku(m.id, m.text, m.attrs)));
+        conn.onStatus((s) => { if (alive) setStatus(s); });
+        setStatus('connected');
+      }).catch((e) => {
+        console.error('[useDanmaku] connect failed', e);
+        if (!alive) return;
+        setStatus('reconnecting');
+        retryTimer = setTimeout(() => attemptConnect(attempt + 1), retryDelayMs(attempt));
+      });
+    };
+
+    attemptConnect(0);
+    return () => {
+      alive = false;
+      clearRetry();
+      void connRef.current?.close();
+      connRef.current = null;
+    };
   }, [connect, push]);
 
   const send = useCallback(async (text: string, profile: Profile) => {

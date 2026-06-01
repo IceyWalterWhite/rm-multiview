@@ -1,72 +1,57 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 const SPEED_PX_PER_S = 25; // 照搬官方滚动速度
-const PAUSE_MS = 1500;     // 滑到底 / 归零后的停顿
 
 interface Props {
   text?: string | null;
   isNext?: boolean;
-  fallback: string; // 无赛事数据时的兜底文案，如 "北部赛区 · 主视角"
+  fallback: string; // 无赛事数据时的兜底文案
 }
 
-// 照搬官方 handleTextScroll：测溢出量，仅溢出才滚；滑到底→停→瞬时归零→循环。
 export function MatchTitleBar({ text, isNext, fallback }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const display = text ? (isNext ? '下一场 ' : '') + text : fallback;
+
+  // 只有溢出时才滚动：测量容器与文本宽度差
+  const [overflowing, setOverflowing] = useState(false);
+  const [durationMs, setDurationMs] = useState(0);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     const el = textRef.current;
     if (!container || !el) return;
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let cancelled = false;
-    const clear = () => { if (timer !== null) { clearTimeout(timer); timer = null; } };
+    const cs = getComputedStyle(container);
+    const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const innerW = container.clientWidth - padX;
+    const overflow = el.scrollWidth - innerW;
 
-    const reset = () => {
-      el.style.transitionDuration = '0s';
-      el.style.transform = 'translateX(0)';
-    };
-
-    const run = () => {
-      if (cancelled) return;
-      reset();
-      // 容器有左右内边距，clientWidth 含 padding；要滚到完整露出末尾，溢出量须对照「内容区」宽度
-      const cs = getComputedStyle(container);
-      const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-      const overflow = el.scrollWidth - (container.clientWidth - padX);
-      if (overflow <= 0) return; // 不溢出不滚
-      const durMs = (overflow / SPEED_PX_PER_S) * 1000;
-      timer = setTimeout(() => {
-        if (cancelled) return;
-        el.style.transitionDuration = `${durMs}ms`;
-        el.style.transform = `translateX(-${overflow}px)`; // 滑到露出末尾
-        timer = setTimeout(() => {
-          if (cancelled) return;
-          reset();                              // 瞬时弹回开头
-          timer = setTimeout(run, PAUSE_MS);    // 停顿后再循环
-        }, durMs + PAUSE_MS);
-      }, PAUSE_MS);
-    };
-
-    const restart = () => { clear(); run(); };
-    run();
-
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(restart) : null;
-    ro?.observe(container);
-
-    return () => {
-      cancelled = true;
-      clear();
-      ro?.disconnect();
-      reset(); // 等价官方 clearScrollState
-    };
+    if (overflow <= 0) {
+      setOverflowing(false);
+      setDurationMs(0);
+    } else {
+      setOverflowing(true);
+      // 两份文本拼接后总宽度 = 2 × scrollWidth，动画从 0 → -scrollWidth
+      // 等效距离 = scrollWidth（一份完整文本）
+      setDurationMs((el.scrollWidth / SPEED_PX_PER_S) * 1000);
+    }
   }, [display]);
 
   return (
     <div className="match-title" ref={containerRef}>
-      <span className="match-title__text" ref={textRef}>{display}</span>
+      {overflowing ? (
+        <span
+          className="match-title__scroll"
+          style={{ animationDuration: `${durationMs}ms` }}
+        >
+          {/* 两份文本拼接：translateX 从 0 到 -50% 实现无缝循环 */}
+          <span ref={textRef} className="match-title__seg">{display}</span>
+          <span className="match-title__seg">{display}</span>
+        </span>
+      ) : (
+        <span className="match-title__text" ref={textRef}>{display}</span>
+      )}
     </div>
   );
 }

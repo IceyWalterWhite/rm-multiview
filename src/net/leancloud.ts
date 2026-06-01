@@ -11,6 +11,27 @@ export interface DanmakuConnection {
   close: () => Promise<void>;
 }
 
+// LeanCloud SDK doesn't export these types; declare minimal structural interfaces
+// covering only the methods/properties we actually use.
+interface IMClient {
+  on(event: string, handler: (msg: unknown) => void): void;
+  getConversation(id: string): Promise<Conversation>;
+}
+
+interface Conversation {
+  transient: boolean;
+  join(): Promise<unknown>;
+  queryMessages(options: { limit: number }): Promise<LCMessage[]>;
+  send(msg: TextMessage): Promise<LCMessage>;
+}
+
+interface LCMessage {
+  id?: string;
+  text?: string;
+  getAttributes(): Record<string, unknown> | undefined;
+  getText(): string | undefined;
+}
+
 function randomClientId(): string {
   let s = '';
   for (let i = 0; i < 17; i++) s += Math.floor(Math.random() * 10);
@@ -49,23 +70,22 @@ export function connectDanmaku(
 
 async function createConnection(chatRoomId: string): Promise<DanmakuConnection> {
   const realtime = getRealtime();
-  // IMClient is not exported from leancloud-realtime typings; use any
-  const client: any = await realtime.createIMClient(randomClientId());
-  // getConversation returns PresistentConversation (not exported); use any
-  const conv: any = await client.getConversation(chatRoomId);
+  const client = await realtime.createIMClient(randomClientId()) as unknown as IMClient;
+  const conv: Conversation = await client.getConversation(chatRoomId);
   if (conv.transient) { try { await conv.join(); } catch { /* transient join may noop */ } }
 
-  const toRaw = (message: any): RawMessage => {
-    const attrs = (message.getAttributes && message.getAttributes()) || {};
+  const toRaw = (message: LCMessage): RawMessage => {
+    const attrs = message.getAttributes?.() ?? {};
     const text = message.text !== undefined ? message.text : (message.getText?.() ?? '');
     return { id: String(message.id ?? ''), text, attrs };
   };
 
   let handler: ((m: RawMessage) => void) | null = null;
   const pending: RawMessage[] = []; // live messages arriving before onMessage is registered
-  client.on(Event.MESSAGE, (message: any) => {
-    if (handler) handler(toRaw(message));
-    else pending.push(toRaw(message));
+  client.on(Event.MESSAGE, (message: unknown) => {
+    const raw = toRaw(message as LCMessage);
+    if (handler) handler(raw);
+    else pending.push(raw);
   });
 
   // 连接状态机：SDK 自带 WS 重连，但瞬态聊天室成员关系在重连后不自动恢复，
@@ -83,7 +103,7 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
   // 入会拉最近历史填充列表（瞬态聊天室支持 queryMessages，按时间升序返回）
   let history: RawMessage[] = [];
   try {
-    const hist: any[] = await conv.queryMessages({ limit: 50 });
+    const hist: LCMessage[] = await conv.queryMessages({ limit: 50 });
     history = (hist ?? []).map(toRaw);
   } catch { /* history is optional */ }
 
@@ -103,7 +123,7 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
       };
       const msg = new TextMessage(text);
       msg.setAttributes(attrs);
-      const sent: any = await conv.send(msg);
+      const sent = await conv.send(msg);
       return { id: String(sent.id ?? ''), text, attrs };
     },
     async close() { /* no-op: keep the singleton connection alive for the SPA lifetime */ },

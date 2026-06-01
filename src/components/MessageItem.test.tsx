@@ -4,14 +4,14 @@ import { MessageItem } from './MessageItem';
 import type { Danmaku } from '../types';
 import { COLOR_VETERAN, COLOR_COMMON } from '../config';
 
-const base: Danmaku = { id: '1', text: '加油', nickname: '强强', schoolName: '清华大学', position: '校友', racingAge: 0, badge: 'electronicTenth', sendTime: 0, userId: 0 };
+const base: Danmaku = { id: '1', text: '加油', nickname: 'UserA', schoolName: 'A大学', position: '校友', racingAge: 0, badge: 'electronicTenth', sendTime: 0, userId: 0 };
 
 describe('MessageItem', () => {
   it('renders text, nickname, school and tag', () => {
     render(<MessageItem d={base} />);
     expect(screen.getByText('加油')).toBeInTheDocument();
-    expect(screen.getByText('强强')).toBeInTheDocument();
-    expect(screen.getByText('清华大学')).toBeInTheDocument();
+    expect(screen.getByText('UserA')).toBeInTheDocument();
+    expect(screen.getByText('A大学')).toBeInTheDocument();
     expect(screen.getByText('校友')).toBeInTheDocument();
   });
   it('uses gold color for 老队员', () => {

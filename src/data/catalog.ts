@@ -5,8 +5,33 @@ function streamId(src: string): string {
   const m = /\/robomaster\/([^/?.]+)/.exec(src ?? '');
   return m ? m[1] : '';
 }
-function toSources(raw: any[]): QualitySource[] {
-  return (raw ?? []).map((s) => ({ label: String(s.label), src: String(s.src), res: String(s.res ?? '') }));
+
+// Minimal structural types for the external live_game_info JSON payload.
+// We only declare the fields we actually read; everything else stays unknown.
+interface LiveZone {
+  liveState?: number;
+  zoneName?: string;
+  chatRoomId?: string;
+  zoneLiveString?: unknown[];
+  fpvData?: FpvEntry[];
+}
+
+interface FpvEntry {
+  role?: string;
+  sources?: unknown[];
+}
+
+interface QualityEntry {
+  label?: unknown;
+  src?: unknown;
+  res?: unknown;
+}
+
+function toSources(raw: unknown[]): QualitySource[] {
+  return (raw ?? []).map((s) => {
+    const e = s as QualityEntry;
+    return { label: String(e.label ?? ''), src: String(e.src ?? ''), res: String(e.res ?? '') };
+  });
 }
 function sideOf(role: string): Side {
   if (role.includes('红')) return 'red';
@@ -26,12 +51,13 @@ export class NoLiveZoneError extends Error {
   }
 }
 
-export function parseLiveGameInfo(json: any): ZoneCatalog {
-  const zones: any[] = json?.eventData ?? [];
+export function parseLiveGameInfo(json: unknown): ZoneCatalog {
+  const payload = json as { eventData?: LiveZone[] } | null;
+  const zones: LiveZone[] = payload?.eventData ?? [];
   const zone = zones.find((z) => z?.liveState === 1);
   if (!zone) throw new NoLiveZoneError();
 
-  const mainSources = toSources(zone.zoneLiveString);
+  const mainSources = toSources(zone.zoneLiveString ?? []);
   const main: StreamView = {
     id: streamId(mainSources[0]?.src ?? ''),
     role: '主视角',
@@ -44,7 +70,7 @@ export function parseLiveGameInfo(json: any): ZoneCatalog {
   for (const f of zone.fpvData ?? []) {
     const role = String(f.role ?? '');
     if (isDiscarded(role)) continue;
-    const sources = toSources(f.sources);
+    const sources = toSources(f.sources ?? []);
     const view: StreamView = { id: streamId(sources[0]?.src ?? ''), role, side: sideOf(role), sources };
     if (view.side === 'red') redViews.push(view);
     else if (view.side === 'blue') blueViews.push(view);

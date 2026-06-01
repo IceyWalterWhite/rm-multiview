@@ -22,10 +22,9 @@ export default function App() {
     [chatRoomId],
   );
 
-  if (state.status === 'loading') return <div className="loading">连接当前直播赛区…</div>;
-  if (state.status === 'ended') return <div className="fatal">本场直播已结束</div>;
-  if (state.status === 'error') return <div className="fatal">加载失败：{state.message}</div>;
-  if (!connFactory) return <div className="loading">连接当前直播赛区…</div>; // unreachable when live; narrows type
+  if (state.status === 'ended') return <div className="fatal">⚠ 当前没有直播</div>;
+  if (state.status === 'error') return <div className="fatal">⚠ 加载失败：{state.message}</div>;
+  if (state.status !== 'live' || !connFactory) return null;
   return (
     <Live
       catalog={state.catalog} connFactory={connFactory} onSignatureExpired={refresh}

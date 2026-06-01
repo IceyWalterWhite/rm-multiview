@@ -21,12 +21,13 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
   const [flying, setFlying] = useState<Flying[]>([]);
   const lastId = useRef<string | null>(null);
   const trackRR = useRef(0);
-  const mountAt = useRef(Date.now()); // 页面打开时刻：只飞此后到达的新弹幕
+  const mountAt = useRef<number | null>(null); // 页面打开时刻：只飞此后到达的新弹幕
 
   useEffect(() => {
     const latest = messages.at(-1);
     if (!latest || latest.id === lastId.current) return;
     lastId.current = latest.id;
+    mountAt.current ??= Date.now();
     // 加载时回填的历史/旧弹幕(sendTime 久远)不在主视角飞，只飞页面打开后的新消息
     if (latest.sendTime < mountAt.current) return;
     const track = trackRR.current % TRACKS;

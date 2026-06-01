@@ -5,6 +5,7 @@ import { fetchMatchTitle } from '../data/match';
 const POLL_MS = 20000;
 
 type Fetcher = (zoneName: string) => Promise<MatchTitle | null>;
+type TitleState = { zoneName: string; title: MatchTitle | null };
 
 /**
  * 拉取并轮询当前赛区赛事标题。成功（含 null=无比赛）即更新；
@@ -16,15 +17,14 @@ export function useMatchTitle(
   fetcher: Fetcher = fetchMatchTitle,
   pollMs: number = POLL_MS,
 ): MatchTitle | null {
-  const [title, setTitle] = useState<MatchTitle | null>(null);
+  const [state, setState] = useState<TitleState>({ zoneName, title: null });
 
   useEffect(() => {
     let alive = true;
-    setTitle(null); // 切赛区先清空，避免串味（稳态下本 effect 只在挂载时跑一次）
     const tick = async () => {
       try {
         const t = await fetcher(zoneName);
-        if (alive) setTitle(t); // 成功：有值则用，null 则回兜底
+        if (alive) setState({ zoneName, title: t }); // 成功：有值则用，null 则回兜底
       } catch {
         /* 网络错误：保留上次好值 */
       }
@@ -34,5 +34,5 @@ export function useMatchTitle(
     return () => { alive = false; clearInterval(id); };
   }, [zoneName, fetcher, pollMs]);
 
-  return title;
+  return state.zoneName === zoneName ? state.title : null;
 }

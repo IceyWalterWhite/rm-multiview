@@ -5,7 +5,7 @@ import type { Danmaku } from '../types';
 
 // sendTime far in the future guarantees the message is treated as post-mount (mountAt) and flies.
 function mk(id: string, text: string): Danmaku {
-  return { id, text, nickname: 'n', schoolName: '清华大学', position: '队员', racingAge: 1, badge: '', sendTime: Date.now() + 10_000_000, userId: 0 };
+  return { id, text, nickname: 'n', schoolName: 'A大学', position: '队员', racingAge: 1, badge: '', sendTime: Date.now() + 10_000_000, userId: 0 };
 }
 
 const flyOf = (text: string) => screen.getByText(text).closest('.dm-fly') as HTMLElement;

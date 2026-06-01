@@ -7,7 +7,7 @@ import { DEFAULT_PROFILE } from '../hooks/useProfile';
 describe('DanmakuComposer', () => {
   it('calls onSend with typed text and clears input', async () => {
     const onSend = vi.fn().mockResolvedValue(undefined);
-    const profile = { ...DEFAULT_PROFILE, nickname: '强强', schoolName: '清华大学', position: '校友' };
+    const profile = { ...DEFAULT_PROFILE, nickname: 'UserA', schoolName: 'A大学', position: '校友' };
     render(<DanmakuComposer profile={profile} isComplete onSend={onSend} onEditIdentity={() => {}} />);
     const input = screen.getByRole('textbox'); // by role, not placeholder copy (which is user-editable)
     await userEvent.type(input, '！！');

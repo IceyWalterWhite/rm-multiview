@@ -8,7 +8,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe('useMatchTitle', () => {
   it('fetches the title on mount', async () => {
-    const fetcher = async () => T('超级对抗赛 北部赛区 第68场 东北大学 TDT vs 山东理工大学 齐奇');
+    const fetcher = async () => T('超级对抗赛 北部赛区 第68场 A大学 Alpha vs B大学 Beta');
     const { result } = renderHook(() => useMatchTitle('北部赛区', fetcher, 20000));
     await waitFor(() => expect(result.current?.text).toContain('第68场'));
     expect(result.current?.isNext).toBe(false);

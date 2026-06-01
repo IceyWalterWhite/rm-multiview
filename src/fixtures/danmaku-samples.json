@@ -1,158 +1,41 @@
 [
- {
-  "text": "东大秦皇岛加油",
-  "attributes": {
-   "username": "2-队员-南京航空航天大学-NUAA636",
-   "sendTime": 1780045966028,
-   "userId": 143020,
-   "nickname": "NUAA636",
-   "racingAge": 2,
-   "schoolName": "南京航空航天大学",
-   "position": "队员",
-   "badge": "electronicTenth"
+  {
+    "text": "加油",
+    "attributes": {
+      "username": "2-队员-A大学-UserA",
+      "sendTime": 1780045966028,
+      "userId": 143020,
+      "nickname": "UserA",
+      "racingAge": 2,
+      "schoolName": "A大学",
+      "position": "队员",
+      "badge": "electronicTenth"
+    }
+  },
+  {
+    "text": "精彩",
+    "attributes": {
+      "username": "1-老队员-B大学-UserB",
+      "sendTime": 1780045993096,
+      "userId": 106791,
+      "nickname": "UserB",
+      "racingAge": 1,
+      "schoolName": "B大学",
+      "position": "老队员",
+      "badge": ""
+    }
+  },
+  {
+    "text": "看比赛中",
+    "attributes": {
+      "username": "0-校友-C大学-UserC",
+      "sendTime": 1780046009437,
+      "userId": 173015,
+      "nickname": "UserC",
+      "racingAge": 0,
+      "schoolName": "C大学",
+      "position": "校友",
+      "badge": ""
+    }
   }
- },
- {
-  "text": "火锅加油",
-  "attributes": {
-   "username": "2-队员-四川大学-嘉禾万事兴",
-   "sendTime": 1780045960575,
-   "userId": 134276,
-   "nickname": "嘉禾万事兴",
-   "racingAge": 2,
-   "schoolName": "四川大学",
-   "position": "队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "火锅加油",
-  "attributes": {
-   "username": "1-老队员-四川大学-radar",
-   "sendTime": 1780045993096,
-   "userId": 106791,
-   "nickname": "radar",
-   "racingAge": 1,
-   "schoolName": "四川大学",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "hotpot",
-  "attributes": {
-   "username": "2-老队员-厦门大学-豆浆白倒",
-   "sendTime": 1780045994795,
-   "userId": 63812,
-   "nickname": "豆浆白倒",
-   "racingAge": 2,
-   "schoolName": "厦门大学",
-   "position": "老队员",
-   "badge": ""
-  }
- },
- {
-  "text": "火锅加油",
-  "attributes": {
-   "username": "2-老队员-四川大学-乐乐",
-   "sendTime": 1780046001784,
-   "userId": 64826,
-   "nickname": "乐乐",
-   "racingAge": 2,
-   "schoolName": "四川大学",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "火锅加油",
-  "attributes": {
-   "username": "0-校友-四川大学-虚舲",
-   "sendTime": 1780046009437,
-   "userId": 173015,
-   "nickname": "虚舲",
-   "racingAge": 0,
-   "schoolName": "四川大学",
-   "position": "校友",
-   "badge": ""
-  }
- },
- {
-  "text": "火锅加油",
-  "attributes": {
-   "username": "1-队员-重庆理工大学-D_Rose",
-   "sendTime": 1780046013249,
-   "userId": 143756,
-   "nickname": "D_Rose",
-   "racingAge": 1,
-   "schoolName": "重庆理工大学",
-   "position": "队员",
-   "badge": ""
-  }
- },
- {
-  "text": "东秦加油！",
-  "attributes": {
-   "username": "2-老队员-东北大学秦皇岛分校-HZH7",
-   "sendTime": 1780046031323,
-   "userId": 101723,
-   "nickname": "HZH7",
-   "racingAge": 2,
-   "schoolName": "东北大学秦皇岛分校",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "韩神神了",
-  "attributes": {
-   "username": "2-老队员-东北大学秦皇岛分校-jinhan",
-   "sendTime": 1780048446569,
-   "userId": 92877,
-   "nickname": "jinhan",
-   "racingAge": 2,
-   "schoolName": "东北大学秦皇岛分校",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "超绝一小时",
-  "attributes": {
-   "username": "3-老队员-东北大学秦皇岛分校-啤酒蘑菇",
-   "sendTime": 1780048456118,
-   "userId": 84458,
-   "nickname": "啤酒蘑菇",
-   "racingAge": 3,
-   "schoolName": "东北大学秦皇岛分校",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "冷知识：已经打了一小时了",
-  "attributes": {
-   "username": "3-老队员-东北大学秦皇岛分校-啤酒蘑菇",
-   "sendTime": 1780048463616,
-   "userId": 84458,
-   "nickname": "啤酒蘑菇",
-   "racingAge": 3,
-   "schoolName": "东北大学秦皇岛分校",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- },
- {
-  "text": "哈哈哈离开实验室摸鱼一小时了",
-  "attributes": {
-   "username": "4-老队员-南洋理工大学-融合",
-   "sendTime": 1780048474251,
-   "userId": 59174,
-   "nickname": "融合",
-   "racingAge": 4,
-   "schoolName": "南洋理工大学",
-   "position": "老队员",
-   "badge": "electronicTenth"
-  }
- }
 ]
