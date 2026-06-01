@@ -23,10 +23,11 @@ describe('useMatchTitle', () => {
     expect(result.current?.text).toBe('A');
   });
 
-  it('exposes null when the fetch resolves null (no match → fallback)', async () => {
-    const fetcher = async () => null;
+  it('resolves null and stays null when fetcher returns null', async () => {
+    let calls = 0;
+    const fetcher = async () => { calls++; return null; };
     const { result } = renderHook(() => useMatchTitle('z', fetcher, 10000));
-    await sleep(20);
+    await waitFor(() => expect(calls).toBeGreaterThan(0));
     expect(result.current).toBeNull();
   });
 });
