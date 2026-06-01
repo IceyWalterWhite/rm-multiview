@@ -50,7 +50,7 @@ export function LiveStage(p: Props) {
     <section className="live-stage">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} zoneName={p.catalog.zoneName} matchTitle={matchTitle} messages={p.messages} onSignatureExpired={p.onSignatureExpired} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} onSignatureExpired={p.onSignatureExpired} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
