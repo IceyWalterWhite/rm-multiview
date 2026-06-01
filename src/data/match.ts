@@ -35,9 +35,8 @@ export function parseCurrentMatch(json: any, zoneName: string): MatchTitle | nul
     return z === zoneName;
   });
   if (!el) return null;
-  if (el.currentMatch) return { text: formatMatchTitle(el.currentMatch), isNext: false };
-  if (el.nextMatch) return { text: formatMatchTitle(el.nextMatch), isNext: true };
-  return null;
+  const m = el.currentMatch ?? el.nextMatch;
+  return m ? { text: formatMatchTitle(m), isNext: !el.currentMatch } : null;
 }
 
 export async function fetchMatchTitle(
