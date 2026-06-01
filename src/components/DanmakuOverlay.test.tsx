@@ -9,6 +9,7 @@ function mk(id: string, text: string): Danmaku {
 }
 
 const flyOf = (text: string) => screen.getByText(text).closest('.dm-fly') as HTMLElement;
+const TRACKS_TO_FILL = 5; // spawn one danmaku per track (matches TRACKS in the component)
 
 afterEach(() => vi.useRealTimers());
 
@@ -25,6 +26,18 @@ describe('DanmakuOverlay', () => {
     render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
     act(() => { vi.advanceTimersByTime(120_000); }); // two minutes pass...
     expect(screen.getByText('AAA')).toBeInTheDocument(); // ...still there: no timer removal
+  });
+
+  it('confines danmaku to the upper half of the stage (top <= 50%)', () => {
+    const msgs: Danmaku[] = [];
+    const { rerender } = render(<DanmakuOverlay messages={msgs} />);
+    for (let i = 0; i < TRACKS_TO_FILL; i++) {
+      msgs.push(mk(`m${i}`, `T${i}`));
+      rerender(<DanmakuOverlay messages={[...msgs]} />);
+    }
+    const tops = [...document.querySelectorAll('.dm-fly')].map((el) => parseFloat((el as HTMLElement).style.top));
+    expect(tops.length).toBe(TRACKS_TO_FILL);
+    for (const top of tops) expect(top).toBeLessThanOrEqual(50);
   });
 
   it('keeps a constant px/s speed: fly duration scales linearly with viewport width', () => {
