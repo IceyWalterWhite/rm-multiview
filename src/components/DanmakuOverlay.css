@@ -1,0 +1,12 @@
+.dm-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.dm-fly {
+  position: absolute; left: 100%; white-space: nowrap;
+  font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,.9);
+  animation-name: dm-move; animation-timing-function: linear; animation-fill-mode: forwards;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+@keyframes dm-move { from { transform: translateX(0); } to { transform: translateX(-220vw); } }
+.dm-badge { width: 18px; height: 18px; background: url("https://rm-static.djicdn.com/documents/73177/f6d5917aea9f21741087685960555448.png") center/contain no-repeat; display: inline-block; flex: none; }
+.dm-school { color: #9cc3ff; }
+.dm-text { color: #fff; }
+.dm-tag { font-size: 11px; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }

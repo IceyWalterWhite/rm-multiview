@@ -1,0 +1,46 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Danmaku, Profile } from '../types';
+import { messageToDanmaku } from '../data/danmaku';
+import { CHAT_BUFFER_LIMIT } from '../config';
+import { connectDanmaku, type DanmakuConnection, type DanmakuStatus } from '../net/leancloud';
+
+type ConnFactory = () => Promise<DanmakuConnection>;
+
+export function useDanmaku(connect: ConnFactory) {
+  const [messages, setMessages] = useState<Danmaku[]>([]);
+  const [status, setStatus] = useState<DanmakuStatus>('connecting');
+  const connRef = useRef<DanmakuConnection | null>(null);
+
+  const push = useCallback((d: Danmaku) => {
+    setMessages((prev) => {
+      const next = prev.length >= CHAT_BUFFER_LIMIT ? prev.slice(prev.length - CHAT_BUFFER_LIMIT + 1) : prev.slice();
+      next.push(d);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    connect().then((conn) => {
+      if (!alive) { conn.close(); return; }
+      connRef.current = conn;
+      conn.onMessage((m) => push(messageToDanmaku(m.id, m.text, m.attrs)));
+      conn.onStatus((s) => { if (alive) setStatus(s); });
+      setStatus('connected');
+    }).catch((e) => { console.error('[useDanmaku] connect failed', e); /* 保持 'connecting'：初次失败无自动重试路径 */ });
+    return () => { alive = false; connRef.current?.close(); };
+  }, [connect, push]);
+
+  const send = useCallback(async (text: string, profile: Profile) => {
+    const conn = connRef.current;
+    if (!conn) throw new Error('not connected');
+    const raw = await conn.send(text, profile);
+    push(messageToDanmaku(raw.id || 'local-' + Date.now(), raw.text, raw.attrs));
+  }, [push]);
+
+  return { messages, status, connected: status === 'connected', send };
+}
+
+export function makeLiveConnFactory(chatRoomId: string): ConnFactory {
+  return () => connectDanmaku(chatRoomId);
+}

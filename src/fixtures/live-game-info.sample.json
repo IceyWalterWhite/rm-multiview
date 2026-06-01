@@ -1,0 +1,32 @@
+{
+  "eventData": [
+    {
+      "zoneName": "南部赛区", "liveState": 0, "matchState": -1,
+      "chatRoomId": "old000000000000000000000",
+      "zoneLiveString": [],
+      "fpvData": []
+    },
+    {
+      "zoneName": "北部赛区", "liveState": 1, "matchState": 1,
+      "chatRoomId": "69ff0439fa62cf0ebe01d583",
+      "zoneLiveString": [
+        {"label":"1080p","type":"application/vnd.apple.mpegurl","src":"https://rtmp.djicdn.com/robomaster/fight2026-output.m3u8?auth_key=X","res":"high"},
+        {"label":"720p","type":"application/vnd.apple.mpegurl","src":"https://rtmp.djicdn.com/robomaster/fight2026-output_ud.m3u8?auth_key=X","res":"middle"},
+        {"label":"540p","type":"application/vnd.apple.mpegurl","src":"https://rtmp.djicdn.com/robomaster/fight2026-output_hd.m3u8?auth_key=X","res":"low"}
+      ],
+      "fpvData": [
+        {"role":"主视角（无解说版）","headimg":"h","sources":[{"label":"1080p","src":"https://rtmp.djicdn.com/robomaster/fight2026013.m3u8?auth_key=X","res":"high"}]},
+        {"role":"红方英雄第一视角","headimg":"h","sources":[
+          {"label":"1080p","src":"https://rtmp.djicdn.com/robomaster/fight2026001.m3u8?auth_key=X","res":"high"},
+          {"label":"720p","src":"https://rtmp.djicdn.com/robomaster/fight2026001_ud.m3u8?auth_key=X","res":"middle"},
+          {"label":"540p","src":"https://rtmp.djicdn.com/robomaster/fight2026001_hd.m3u8?auth_key=X","res":"low"}
+        ]},
+        {"role":"红方机器人第一视角合集","headimg":"h","sources":[{"label":"1080p","src":"https://rtmp.djicdn.com/robomaster/fight2026011.m3u8?auth_key=X","res":"high"}]},
+        {"role":"蓝方英雄第一视角","headimg":"h","sources":[
+          {"label":"1080p","src":"https://rtmp.djicdn.com/robomaster/fight2026006.m3u8?auth_key=X","res":"high"},
+          {"label":"540p","src":"https://rtmp.djicdn.com/robomaster/fight2026006_hd.m3u8?auth_key=X","res":"low"}
+        ]}
+      ]
+    }
+  ]
+}
