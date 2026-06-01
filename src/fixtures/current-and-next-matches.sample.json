@@ -1,0 +1,26 @@
+[
+  { "currentMatch": null, "nextMatch": null },
+  {
+    "currentMatch": null,
+    "nextMatch": {
+      "id": "31217", "orderNumber": 0, "matchType": "WARMUP", "status": "WAITING",
+      "redSide": { "player": null },
+      "blueSide": { "player": null },
+      "zone": { "name": "东部赛区", "event": { "title": "RMUC 2026超级对抗赛" } }
+    }
+  },
+  {
+    "currentMatch": {
+      "id": "31160", "orderNumber": 68, "matchType": "KNOCKOUT", "status": "STARTED",
+      "redSide": { "player": { "team": { "collegeName": "东北大学", "name": "TDT" } } },
+      "blueSide": { "player": { "team": { "collegeName": "山东理工大学", "name": "齐奇" } } },
+      "zone": { "name": "北部赛区", "event": { "title": "RMUC 2026超级对抗赛" } }
+    },
+    "nextMatch": {
+      "id": "31161", "orderNumber": 69, "matchType": "KNOCKOUT", "status": "WAITING",
+      "redSide": { "player": { "team": { "collegeName": "长安大学", "name": "VGD" } } },
+      "blueSide": { "player": { "team": { "collegeName": "北京理工大学", "name": "追梦" } } },
+      "zone": { "name": "北部赛区", "event": { "title": "RMUC 2026超级对抗赛" } }
+    }
+  }
+]
