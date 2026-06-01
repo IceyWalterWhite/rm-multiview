@@ -7,11 +7,10 @@ const POLL_MS = 20000;
 type Fetcher = (zoneName: string) => Promise<MatchTitle | null>;
 
 /**
- * 拉取并轮询当前赛区赛事标题。
+ * 拉取并轮询当前赛区赛事标题。成功（含 null=无比赛）即更新；
+ * 网络出错则保留上次好值，避免比赛间隙闪烁。切赛区时先清空。
  * @param fetcher 须为稳定引用（模块级函数或 useMemo/useCallback）；传内联函数会导致每次渲染重启轮询。
  */
-// 拉取并轮询当前赛区赛事标题。成功（含 null=无比赛）即更新；
-// 网络出错则保留上次好值，避免比赛间隙闪烁。切赛区时先清空。
 export function useMatchTitle(
   zoneName: string,
   fetcher: Fetcher = fetchMatchTitle,
