@@ -1,25 +1,44 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { DanmakuOverlay } from './DanmakuOverlay';
 import type { Danmaku } from '../types';
 
+// sendTime far in the future guarantees the message is treated as post-mount (mountAt) and flies.
 function mk(id: string, text: string): Danmaku {
-  // sendTime = now so the overlay treats these as live (post-mount) messages and flies them
-  return { id, text, nickname: 'n', schoolName: '清华大学', position: '队员', racingAge: 1, badge: '', sendTime: Date.now(), userId: 0 };
+  return { id, text, nickname: 'n', schoolName: '清华大学', position: '队员', racingAge: 1, badge: '', sendTime: Date.now() + 10_000_000, userId: 0 };
 }
 
-beforeEach(() => vi.useFakeTimers());
+const flyOf = (text: string) => screen.getByText(text).closest('.dm-fly') as HTMLElement;
+
 afterEach(() => vi.useRealTimers());
 
 describe('DanmakuOverlay', () => {
-  it('removes each danmaku after its own lifetime even when newer ones arrive (no accumulation)', () => {
-    const { rerender } = render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
+  it('flies a new (post-mount) message', () => {
+    render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
     expect(screen.getByText('AAA')).toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(1000); });
-    rerender(<DanmakuOverlay messages={[mk('a', 'AAA'), mk('b', 'BBB')]} />);
-    expect(screen.getByText('BBB')).toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(9000); }); // now t=10000: AAA(9000) and BBB(10000) both expired
-    expect(screen.queryByText('AAA')).toBeNull(); // FAILS on the buggy version (AAA timer was cancelled)
-    expect(screen.queryByText('BBB')).toBeNull();
+  });
+
+  it('does not remove a danmaku on a fixed timer — only when its animation ends', () => {
+    // Removal is driven by animationend (onAnimationEnd), NOT a setTimeout. This is what lets a
+    // hover-paused danmaku stay put: a paused animation never ends, so no clock can delete it.
+    vi.useFakeTimers();
+    render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
+    act(() => { vi.advanceTimersByTime(120_000); }); // two minutes pass...
+    expect(screen.getByText('AAA')).toBeInTheDocument(); // ...still there: no timer removal
+  });
+
+  it('keeps a constant px/s speed: fly duration scales linearly with viewport width', () => {
+    // distance = 220vw = 2.2×innerWidth px; duration = distance / speed → same px/s on any screen.
+    window.innerWidth = 1000;
+    const { unmount } = render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
+    const dNarrow = parseFloat(flyOf('AAA').style.animationDuration);
+    unmount();
+
+    window.innerWidth = 2000;
+    render(<DanmakuOverlay messages={[mk('b', 'BBB')]} />);
+    const dWide = parseFloat(flyOf('BBB').style.animationDuration);
+
+    expect(dNarrow).toBeGreaterThan(0);
+    expect(dWide).toBeCloseTo(dNarrow * 2, 5); // 2× width → 2× duration → identical px/s
   });
 });

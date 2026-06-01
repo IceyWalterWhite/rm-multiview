@@ -4,7 +4,9 @@
   font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,.9);
   animation-name: dm-move; animation-timing-function: linear; animation-fill-mode: forwards;
   display: inline-flex; align-items: center; gap: 6px;
+  pointer-events: auto; /* overlay 整体 none（点击穿透到视频）；弹幕本体可被悬停 */
 }
+.dm-fly:hover { animation-play-state: paused; } /* 悬停暂停滚动，离开继续左滚 */
 @keyframes dm-move { from { transform: translateX(0); } to { transform: translateX(-220vw); } }
 .dm-badge { width: 18px; height: 18px; background: url("https://rm-static.djicdn.com/documents/73177/f6d5917aea9f21741087685960555448.png") center/contain no-repeat; display: inline-block; flex: none; }
 .dm-school { color: #9cc3ff; }

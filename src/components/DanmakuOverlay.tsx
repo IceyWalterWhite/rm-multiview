@@ -5,15 +5,20 @@ import { ANNIVERSARY_BADGE } from '../config';
 import './DanmakuOverlay.css';
 
 const TRACKS = 5;
-const DURATION_MS = 9000;
+const SPEED_PX_PER_S = 240; // 弹幕水平速度（像素/秒）：恒定，与屏幕宽度无关
 
-interface Flying { key: string; d: Danmaku; track: number; }
+// 飞行距离固定为 220vw（见 keyframe dm-move）= 2.2×视口宽 px；
+// 时长 = 距离 / 速度，于是任意屏宽下都是同一 px/s（宽屏不再变快）。
+function flyDurationMs(): number {
+  return (window.innerWidth * 2.2) / SPEED_PX_PER_S * 1000;
+}
+
+interface Flying { key: string; d: Danmaku; track: number; durationMs: number; }
 
 export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
   const [flying, setFlying] = useState<Flying[]>([]);
   const lastId = useRef<string | null>(null);
   const trackRR = useRef(0);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const mountAt = useRef(Date.now()); // 页面打开时刻：只飞此后到达的新弹幕
 
   useEffect(() => {
@@ -25,20 +30,21 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
     const track = trackRR.current % TRACKS;
     trackRR.current += 1;
     const key = `${latest.id}-${trackRR.current}`;
-    setFlying((f) => [...f, { key, d: latest, track }]);
-    const t = setTimeout(() => {
-      setFlying((f) => f.filter((x) => x.key !== key));
-      timers.current = timers.current.filter((x) => x !== t);
-    }, DURATION_MS);
-    timers.current.push(t);
+    setFlying((f) => [...f, { key, d: latest, track, durationMs: flyDurationMs() }]);
   }, [messages]);
 
-  useEffect(() => () => { timers.current.forEach(clearTimeout); }, []); // clear all on unmount only
+  // 飞完（动画结束）即移除。hover 暂停时动画不结束，故不会半途消失。
+  const handleEnd = (key: string) => setFlying((f) => f.filter((x) => x.key !== key));
 
   return (
     <div className="dm-overlay">
-      {flying.map(({ key, d, track }) => (
-        <div key={key} className="dm-fly" style={{ top: `${8 + track * 16}%`, animationDuration: `${DURATION_MS}ms` }}>
+      {flying.map(({ key, d, track, durationMs }) => (
+        <div
+          key={key}
+          className="dm-fly"
+          style={{ top: `${8 + track * 16}%`, animationDuration: `${durationMs}ms` }}
+          onAnimationEnd={() => handleEnd(key)}
+        >
           {d.badge === ANNIVERSARY_BADGE && <i className="dm-badge" />}
           <span className="dm-tag" style={{ color: danmakuColor(d) }}>{identityTag(d)}</span>
           <span className="dm-school">{d.schoolName}</span>
