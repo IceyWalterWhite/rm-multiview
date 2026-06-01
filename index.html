@@ -2,6 +2,9 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <!-- DJI 的 CDN(rm-static/rtmp.djicdn.com)按 Referer 做防盗链:白名单含 robomaster.com 与 localhost,
+         其余来源(如本站公网 IP)一律 403。空 Referer 反而放行,故全站不外发 Referer。 -->
+    <meta name="referrer" content="no-referrer" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RoboMaster 多视角直播</title>
