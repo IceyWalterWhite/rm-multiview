@@ -6,6 +6,7 @@ interface SiteTab { key: string; label: string; url: string; }
 const SITES: SiteTab[] = [
   { key: 'schedule', label: '华南虎赛程分析软件', url: 'https://schedule.scutbot.cn/' },
   { key: 'ladder', label: 'RM天梯榜', url: 'https://www.micdz.cn/RM_LADDER/' },
+  { key: 'fight', label: 'RM斗蛐蛐', url: 'https://rm.ecustcic.com/' },
 ];
 
 export function ReservedPanel() {
