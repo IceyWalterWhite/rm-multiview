@@ -4,7 +4,7 @@
 
 体验地址1: http://8.134.153.137
 
-体验地址2: https://rm-multiview-swnpvgfj.edgeone.cool/
+体验地址2: https://rm-multiview.vercel.app/
 
 ![](image.png)
 
