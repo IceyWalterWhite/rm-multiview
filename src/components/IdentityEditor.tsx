@@ -6,6 +6,13 @@ const POSITIONS = ['队员', '老队员', '校友'];
 
 export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onSave: (p: Profile) => void; onClose: () => void; }) {
   const [p, setP] = useState<Profile>(value);
+  const normalized = { ...p, nickname: p.nickname.trim(), schoolName: p.schoolName.trim() };
+  const canSave = normalized.nickname !== '' && normalized.schoolName !== '';
+  const save = () => {
+    if (!canSave) return;
+    onSave(normalized);
+    onClose();
+  };
   return (
     <div className="id-editor-backdrop" onClick={onClose}>
       <div className="id-editor" onClick={(e) => e.stopPropagation()}>
@@ -21,7 +28,7 @@ export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onS
         <label><input type="checkbox" checked={p.badge === ANNIVERSARY_BADGE} onChange={(e) => setP({ ...p, badge: e.target.checked ? ANNIVERSARY_BADGE : '' })} /> 十周年徽章</label>
         <div className="id-editor-actions">
           <button onClick={onClose}>取消</button>
-          <button className="primary" disabled={!p.nickname || !p.schoolName} onClick={() => { onSave(p); onClose(); }}>保存</button>
+          <button className="primary" disabled={!canSave} onClick={save}>保存</button>
         </div>
         <p className="id-hint">身份为自填，请文明发言。</p>
       </div>

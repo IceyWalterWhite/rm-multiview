@@ -19,21 +19,29 @@ interface Flying { key: string; d: Danmaku; track: number; durationMs: number; }
 
 export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
   const [flying, setFlying] = useState<Flying[]>([]);
-  const lastId = useRef<string | null>(null);
+  const seen = useRef(new Set<string>());
   const trackRR = useRef(0);
   const mountAt = useRef<number | null>(null); // 页面打开时刻：只飞此后到达的新弹幕
 
   useEffect(() => {
-    const latest = messages.at(-1);
-    if (!latest || latest.id === lastId.current) return;
-    lastId.current = latest.id;
-    mountAt.current ??= Date.now();
-    // 加载时回填的历史/旧弹幕(sendTime 久远)不在主视角飞，只飞页面打开后的新消息
-    if (latest.sendTime < mountAt.current) return;
-    const track = trackRR.current % TRACKS;
-    trackRR.current += 1;
-    const key = `${latest.id}-${trackRR.current}`;
-    setFlying((f) => [...f, { key, d: latest, track, durationMs: flyDurationMs() }]);
+    mountAt.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    if (mountAt.current === null) return;
+    const nextFlying: Flying[] = [];
+    for (const d of messages) {
+      const messageKey = `${d.id}-${d.sendTime}-${d.text}`;
+      if (seen.current.has(messageKey)) continue;
+      seen.current.add(messageKey);
+      // 加载时回填的历史/旧弹幕(sendTime 久远)不在主视角飞，只飞页面打开后的新消息
+      if (d.sendTime < mountAt.current) continue;
+      const track = trackRR.current % TRACKS;
+      trackRR.current += 1;
+      nextFlying.push({ key: `${messageKey}-${trackRR.current}`, d, track, durationMs: flyDurationMs() });
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- incoming messages append to the animation queue, then animationend removes them.
+    if (nextFlying.length) setFlying((f) => [...f, ...nextFlying]);
   }, [messages]);
 
   // 飞完（动画结束）即移除。hover 暂停时动画不结束，故不会半途消失。

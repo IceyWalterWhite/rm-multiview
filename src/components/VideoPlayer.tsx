@@ -1,11 +1,17 @@
 import { useRef } from 'react';
 import { useHlsPlayer } from '../hooks/useHlsPlayer';
 
-interface Props { src?: string; muted?: boolean; className?: string; onSignatureExpired?: () => void; }
+interface Props {
+  src?: string;
+  muted?: boolean;
+  className?: string;
+  onSignatureExpired?: () => void;
+  keepAliveWhenHidden?: boolean;
+}
 
-export function VideoPlayer({ src, muted = true, className, onSignatureExpired }: Props) {
+export function VideoPlayer({ src, muted = true, className, onSignatureExpired, keepAliveWhenHidden = false }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
-  const { error } = useHlsPlayer(ref, src, onSignatureExpired);
+  const { error } = useHlsPlayer(ref, src, onSignatureExpired, { keepAliveWhenHidden });
   return (
     <div className="video-wrap">
       <video ref={ref} className={className} muted={muted} playsInline autoPlay />

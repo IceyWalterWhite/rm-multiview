@@ -4,8 +4,8 @@ import { DanmakuOverlay } from './DanmakuOverlay';
 import type { Danmaku } from '../types';
 
 // sendTime far in the future guarantees the message is treated as post-mount (mountAt) and flies.
-function mk(id: string, text: string): Danmaku {
-  return { id, text, nickname: 'n', schoolName: 'A大学', position: '队员', racingAge: 1, badge: '', sendTime: Date.now() + 10_000_000, userId: 0 };
+function mk(id: string, text: string, sendTime: number = Date.now() + 10_000_000): Danmaku {
+  return { id, text, nickname: 'n', schoolName: 'A大学', position: '队员', racingAge: 1, badge: '', sendTime, userId: 0 };
 }
 
 const flyOf = (text: string) => screen.getByText(text).closest('.dm-fly') as HTMLElement;
@@ -17,6 +17,26 @@ describe('DanmakuOverlay', () => {
   it('flies a new (post-mount) message', () => {
     render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
     expect(screen.getByText('AAA')).toBeInTheDocument();
+  });
+
+  it('flies every new message from a batched update', () => {
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={[mk('a', 'AAA'), mk('b', 'BBB'), mk('c', 'CCC')]} />);
+
+    expect(screen.getByText('AAA')).toBeInTheDocument();
+    expect(screen.getByText('BBB')).toBeInTheDocument();
+    expect(screen.getByText('CCC')).toBeInTheDocument();
+  });
+
+  it('uses component mount time rather than first-message effect time', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+
+    vi.setSystemTime(1_500);
+    rerender(<DanmakuOverlay messages={[mk('live', 'LIVE', 1_200)]} />);
+
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
   });
 
   it('does not remove a danmaku on a fixed timer — only when its animation ends', () => {

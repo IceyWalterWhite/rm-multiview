@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 const SPEED_PX_PER_S = 25; // 照搬官方滚动速度
 
@@ -17,7 +17,7 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
   const [overflowing, setOverflowing] = useState(false);
   const [durationMs, setDurationMs] = useState(0);
 
-  useLayoutEffect(() => {
+  const measure = useCallback(() => {
     const container = containerRef.current;
     const el = textRef.current;
     if (!container || !el) return;
@@ -36,7 +36,16 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
       // 等效距离 = scrollWidth（一份完整文本）
       setDurationMs((el.scrollWidth / SPEED_PX_PER_S) * 1000);
     }
-  }, [display]);
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [display, measure]);
 
   return (
     <div className="match-title" ref={containerRef}>
