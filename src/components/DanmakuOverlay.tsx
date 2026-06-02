@@ -7,7 +7,7 @@ import './DanmakuOverlay.css';
 const TRACKS = 5;
 const SPEED_PX_PER_S = 160; // 弹幕水平速度（像素/秒）：恒定，与屏幕宽度无关
 const TRACK_TOP_PCT = 8;    // 第 0 条轨道距顶 8%
-const TRACK_GAP_PCT = 8;    // 轨道间距 8% → 5 条落在 8%~40%，仅占上半屏
+const TRACK_GAP_PCT = 5;    // 轨道间距 5% → 5 条落在 8%~28%，更密集
 
 // 飞行距离固定为 220vw（见 keyframe dm-move）= 2.2×视口宽 px；
 // 时长 = 距离 / 速度，于是任意屏宽下都是同一 px/s（宽屏不再变快）。
