@@ -32,12 +32,20 @@ export function LiveStage(p: Props) {
   const matchTitle = useMatchTitle(p.catalog.zoneName);
 
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
+  // 同时从 CSS 读取 .side-column 的真实 gap，动态设 --side-col-w 使 5 个 16:9 机位精确填满行高
   useEffect(() => {
     const row = rowRef.current;
     if (!row || typeof ResizeObserver === 'undefined') return;
     const check = () => {
       const side = row.querySelector<HTMLElement>('.side-column');
       const main = row.querySelector<HTMLElement>('.main-stage');
+      // 从 CSS computed style 读取真实 gap，CSS 是唯一真相源
+      const rawGap = side ? parseFloat(getComputedStyle(side).rowGap) : NaN;
+      const gapPx = Number.isFinite(rawGap) ? rawGap : 6;
+      const totalGap = gapPx * 4; // 5 个机位之间有 4 条 gap
+      // colW * 9/16 * 5 + totalGap = rowH  →  colW = (rowH - totalGap) * 16/45
+      const colW = (row.clientHeight - totalGap) * 16 / 45;
+      row.style.setProperty('--side-col-w', String(Math.max(0, colW)) + 'px');
       if (side && main) setTooNarrow(main.clientWidth < side.clientWidth);
     };
     const ro = new ResizeObserver(check);
