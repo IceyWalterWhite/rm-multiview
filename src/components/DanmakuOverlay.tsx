@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Danmaku } from '../types';
-import { identityTag, danmakuColor } from '../data/danmaku';
+import { identityTag, danmakuColor, selectFreshDanmaku, dedupeKey } from '../data/danmaku';
 import { ANNIVERSARY_BADGE } from '../config';
 import './DanmakuOverlay.css';
 
@@ -29,19 +29,16 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
 
   useEffect(() => {
     if (mountAt.current === null) return;
-    const nextFlying: Flying[] = [];
-    for (const d of messages) {
-      const messageKey = `${d.id}-${d.sendTime}-${d.text}`;
-      if (seen.current.has(messageKey)) continue;
-      seen.current.add(messageKey);
-      // 加载时回填的历史/旧弹幕(sendTime 久远)不在主视角飞，只飞页面打开后的新消息
-      if (d.sendTime < mountAt.current) continue;
+    // 只飞页面打开后的新消息；seen 随缓冲重建，长直播下不会无限增长。
+    const { fresh, nextSeen } = selectFreshDanmaku(messages, mountAt.current, seen.current);
+    seen.current = nextSeen;
+    if (!fresh.length) return;
+    const nextFlying: Flying[] = fresh.map((d) => {
       const track = trackRR.current % TRACKS;
       trackRR.current += 1;
-      nextFlying.push({ key: `${messageKey}-${trackRR.current}`, d, track, durationMs: flyDurationMs() });
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- incoming messages append to the animation queue, then animationend removes them.
-    if (nextFlying.length) setFlying((f) => [...f, ...nextFlying]);
+      return { key: `${dedupeKey(d)}-${trackRR.current}`, d, track, durationMs: flyDurationMs() };
+    });
+    setFlying((f) => [...f, ...nextFlying]);
   }, [messages]);
 
   // 飞完（动画结束）即移除。hover 暂停时动画不结束，故不会半途消失。

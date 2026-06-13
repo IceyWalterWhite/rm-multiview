@@ -11,6 +11,12 @@ const SITES: SiteTab[] = [
 
 export function ReservedPanel() {
   const [active, setActive] = useState(0);
+  // 已访问过的 Tab：其 iframe 一经挂载即常驻，靠 display 切换，切回不重载、各自保留滚动/状态。
+  const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
+  const open = (i: number) => {
+    setActive(i);
+    setVisited((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
+  };
   const site = SITES[active];
   return (
     <div className="reserved-panel">
@@ -19,7 +25,7 @@ export function ReservedPanel() {
           <button
             key={s.key}
             className={`rp-tab${i === active ? ' active' : ''}`}
-            onClick={() => setActive(i)}
+            onClick={() => open(i)}
           >
             {s.label}
           </button>
@@ -34,16 +40,18 @@ export function ReservedPanel() {
           ↗ 打开
         </a>
       </div>
-      {/* 两个 iframe 都常驻，靠 display 切换：切 Tab 不重载、各自保留滚动/状态 */}
-      {SITES.map((s, i) => (
-        <iframe
-          key={s.key}
-          className="rp-frame"
-          src={s.url}
-          title={s.label}
-          style={{ display: i === active ? 'block' : 'none' }}
-        />
-      ))}
+      {/* 仅挂载访问过的站点 iframe：避免首屏并发加载三个第三方站点；挂载后常驻不重载 */}
+      {SITES.map((s, i) =>
+        visited.has(i) ? (
+          <iframe
+            key={s.key}
+            className="rp-frame"
+            src={s.url}
+            title={s.label}
+            style={{ display: i === active ? 'block' : 'none' }}
+          />
+        ) : null,
+      )}
     </div>
   );
 }
