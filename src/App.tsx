@@ -8,6 +8,7 @@ import { DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from '
 import { LiveStage } from './components/LiveStage';
 import { ChatSection } from './components/ChatSection';
 import { IdentityEditor } from './components/IdentityEditor';
+import { OfflineView } from './components/OfflineView';
 
 export default function App() {
   const { state, refresh } = useCatalog();
@@ -22,7 +23,7 @@ export default function App() {
     [chatRoomId],
   );
 
-  if (state.status === 'ended') return <div className="fatal">⚠ 当前没有直播</div>;
+  if (state.status === 'ended') return <OfflineView />;
   if (state.status === 'error') return <div className="fatal">⚠ 加载失败：{state.message}</div>;
   if (state.status !== 'live' || !connFactory) return null;
   return (
