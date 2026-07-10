@@ -81,11 +81,16 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
   };
 
   let handler: ((m: RawMessage) => void) | null = null;
-  const pending: RawMessage[] = []; // live messages arriving before onMessage is registered
+  // Only buffer the tiny startup window before the first consumer registers.
+  // After a consumer detaches, the shared socket may keep receiving room
+  // messages while nobody is listening; those should not accumulate or replay
+  // as "startup pending" for a future subscriber.
+  let bufferStartupMessages = true;
+  const pending: RawMessage[] = [];
   client.on(Event.MESSAGE, (message: unknown) => {
     const raw = toRaw(message as LCMessage);
     if (handler) handler(raw);
-    else pending.push(raw);
+    else if (bufferStartupMessages) pending.push(raw);
   });
 
   // 连接状态机：SDK 自带 WS 重连，但瞬态聊天室成员关系在重连后不自动恢复，
@@ -113,6 +118,7 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
       history.forEach(cb);     // recent history first (oldest→newest)
       pending.forEach(cb);     // then any live messages buffered during setup
       pending.length = 0;
+      bufferStartupMessages = false;
     },
     onStatus(cb) { statusHandler = cb; cb(status); },
     async send(text, profile) {
@@ -132,6 +138,8 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
       // can keep pushing messages into the current React tree after navigation.
       handler = null;
       statusHandler = null;
+      pending.length = 0;
+      bufferStartupMessages = false;
     },
   };
 }
