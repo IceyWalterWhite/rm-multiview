@@ -126,6 +126,12 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
       const sent = await conv.send(msg);
       return { id: String(sent.id ?? ''), text, attrs };
     },
-    async close() { /* no-op: keep the singleton connection alive for the SPA lifetime */ },
+    async close() {
+      // Keep the shared SDK/WebSocket alive, but detach callbacks from the
+      // consumer that is unmounting or switching rooms. Otherwise a stale room
+      // can keep pushing messages into the current React tree after navigation.
+      handler = null;
+      statusHandler = null;
+    },
   };
 }

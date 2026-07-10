@@ -49,6 +49,25 @@ describe('useDanmaku', () => {
     expect(result.current.connected).toBe(true);
   });
 
+  it('ignores messages from a stale connection after switching rooms', async () => {
+    const first = fakeConn();
+    const second = fakeConn();
+    const { result, rerender } = renderHook(
+      ({ connect }) => useDanmaku(connect),
+      { initialProps: { connect: async () => first.conn } },
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    rerender({ connect: async () => second.conn });
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      first.emit({ id: 'old', text: 'old room', attrs: { position: '队员' } });
+      second.emit({ id: 'new', text: 'new room', attrs: { position: '队员' } });
+    });
+    expect(result.current.messages.map((m) => m.text)).toEqual(['new room']);
+  });
+
   it('optimistically inserts sent message', async () => {
     const { conn } = fakeConn();
     const { result } = renderHook(() => useDanmaku(async () => conn));
