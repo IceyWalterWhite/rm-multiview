@@ -42,7 +42,9 @@ export function useDanmaku(connect: ConnFactory) {
         if (!alive) { void conn.close(); return; }
         clearRetry();
         connRef.current = conn;
-        conn.onMessage((m) => push(messageToDanmaku(m.id, m.text, m.attrs)));
+        conn.onMessage((m) => {
+          if (alive) push(messageToDanmaku(m.id, m.text, m.attrs));
+        });
         conn.onStatus((s) => { if (alive) setStatus(s); });
         setStatus('connected');
       }).catch((e) => {
