@@ -1,4 +1,5 @@
 import { ReservedPanel } from './ReservedPanel';
+import { IcpFooter } from './IcpFooter';
 
 // 无直播时的两屏布局：第一屏盖「当前没有直播」遮罩（占满首屏），
 // 第二屏照常显示内嵌社区工具站，可向下滚动查看（赛程 / 天梯榜 / 斗蛐蛐）。
@@ -11,6 +12,7 @@ export function OfflineView() {
       </section>
       <section className="chat-section">
         <ReservedPanel />
+        <IcpFooter />
       </section>
     </div>
   );

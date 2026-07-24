@@ -72,7 +72,11 @@ button, input, select { font: inherit; }
 .send-btn:disabled { opacity:.55; cursor:progress; transform:none; filter:none; }
 .hint { color:#9aa0a6; font-size:12px; }
 
-.chat-section { height:100vh; height:100dvh; display:flex; gap:10px; padding:14px; }
+/* 底部留 34px 给备案号条（绝对定位其内），两屏总高保持 2×100dvh 不变 */
+.chat-section { position:relative; height:100vh; height:100dvh; display:flex; gap:10px; padding:14px 14px 34px; }
+.icp-footer { position:absolute; left:0; right:0; bottom:0; height:34px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+.icp-footer a { color:#9aa0a6; text-decoration:none; }
+.icp-footer a:hover { color:var(--ink); text-decoration:underline; }
 .reserved-panel { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#15181e; }
 .rp-tabs { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 8px; border-bottom:1px solid var(--line); flex:none; }
 .rp-tab { background:transparent; border:1px solid var(--line-strong); color:#cfd3d8; border-radius:6px; padding:4px 14px; font-size:13px; cursor:pointer; }

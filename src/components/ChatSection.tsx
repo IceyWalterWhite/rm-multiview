@@ -1,6 +1,7 @@
 import type { Danmaku, Profile } from '../types';
 import { ReservedPanel } from './ReservedPanel';
 import { ChatRoom } from './ChatRoom';
+import { IcpFooter } from './IcpFooter';
 
 interface Props {
   zoneName: string; messages: Danmaku[]; profile: Profile; isComplete: boolean;
@@ -12,6 +13,7 @@ export function ChatSection(p: Props) {
     <section className="chat-section" aria-label="聊天与社区">
       <ReservedPanel />
       <ChatRoom zoneName={p.zoneName} messages={p.messages} profile={p.profile} isComplete={p.isComplete} onSend={p.onSend} onEditIdentity={p.onEditIdentity} />
+      <IcpFooter />
     </section>
   );
 }
