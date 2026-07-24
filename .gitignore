@@ -25,6 +25,7 @@ dist-ssr
 
 # Claude 工具 / 会话产物（非项目源码，不提交）
 .remember/
+.serena/
 .superpowers/
 .playwright-mcp/
 .worktrees/

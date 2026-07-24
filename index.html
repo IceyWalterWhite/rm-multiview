@@ -5,12 +5,51 @@
     <!-- DJI 的 CDN(rm-static/rtmp.djicdn.com)按 Referer 做防盗链:白名单含 robomaster.com 与 localhost,
          其余来源(如本站公网 IP)一律 403。空 Referer 反而放行,故全站不外发 Referer。 -->
     <meta name="referrer" content="no-referrer" />
+    <!-- 首帧关键路径的三个域：提前建连省 DNS+TCP+TLS 各 1~2 RTT -->
+    <link rel="preconnect" href="https://rm-static.djicdn.com" crossorigin />
+    <link rel="preconnect" href="https://rtmp.djicdn.com" crossorigin />
+    <link rel="preconnect" href="https://leancloud.robomaster.com" crossorigin />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RoboMaster 多视角直播</title>
+    <meta name="theme-color" content="#0f1217" />
+    <title>RoboMaster 多视角直播 - RM 赛事多机位同屏观看 | rmlive.cn</title>
+    <meta name="description" content="RoboMaster 机甲大师赛多视角直播间：主视角与机器人FPV视角同屏观看，支持画质切换、弹幕互动与赛程预约" />
+    <meta name="keywords" content="RoboMaster,机甲大师,RM直播,多视角直播,机器人比赛,RoboMaster直播间,DJI大疆创新,大疆,人工智能" />
+    <link rel="canonical" href="https://rmlive.cn/" />
+    <!-- 百度移动适配声明；no-transform 阻止百度转码劫持页面 -->
+    <meta name="applicable-device" content="pc,mobile" />
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RoboMaster 多视角直播间" />
+    <meta property="og:title" content="RoboMaster 多视角直播间 - RM 赛事多机位同屏观看" />
+    <meta property="og:description" content="主视角与多路机器人FPV视角同屏观看，支持画质切换、弹幕互动与赛程预约" />
+    <meta property="og:url" content="https://rmlive.cn/" />
+    <meta property="og:image" content="https://rmlive.cn/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RoboMaster 多视角直播间 - RM 赛事多机位同屏观看" />
+    <meta name="twitter:description" content="主视角与多路机器人FPV视角同屏观看，支持画质切换、弹幕互动与赛程预约" />
+    <meta name="twitter:image" content="https://rmlive.cn/og-image.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "RoboMaster 多视角直播间",
+        "alternateName": "rmlive.cn",
+        "url": "https://rmlive.cn/",
+        "description": "RoboMaster 机甲大师赛多视角直播间：主视角与多路机器人FPV视角同屏观看，支持画质切换、弹幕互动与赛程预约",
+        "inLanguage": "zh-CN"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript style="display:flex;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#ffd54a;background:#0f1217;font-weight:700">
+      <h1 style="margin:0;font-size:24px">RoboMaster 多视角直播间</h1>
+      <p style="margin:0;color:#9aa3b2;font-weight:400;max-width:36em;text-align:center">RoboMaster 机甲大师赛多视角直播间：主视角与机器人FPV视角同屏观看，支持画质切换、弹幕互动与赛程预约。</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
