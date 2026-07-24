@@ -60,8 +60,15 @@ describe('DanmakuOverlay', () => {
     for (const top of tops) expect(top).toBeLessThanOrEqual(50);
   });
 
+  it('caps the number of concurrently flying danmaku', () => {
+    const msgs = Array.from({ length: 120 }, (_, i) => mk('m' + i, 'X' + i));
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={msgs} />);
+    expect(document.querySelectorAll('.dm-fly').length).toBeLessThanOrEqual(80);
+  });
+
   it('keeps a constant px/s speed: fly duration scales linearly with viewport width', () => {
-    // distance = 220vw = 2.2×innerWidth px; duration = distance / speed → same px/s on any screen.
+    // distance = 140vw = 1.4×innerWidth px; duration = distance / speed → same px/s on any screen.
     window.innerWidth = 1000;
     const { unmount } = render(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
     const dNarrow = parseFloat(flyOf('AAA').style.animationDuration);

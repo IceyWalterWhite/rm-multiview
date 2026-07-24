@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Profile } from '../types';
 import { ANNIVERSARY_BADGE } from '../config';
 
@@ -6,6 +6,9 @@ const POSITIONS = ['队员', '老队员', '校友'];
 
 export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onSave: (p: Profile) => void; onClose: () => void; }) {
   const [p, setP] = useState<Profile>(value);
+  const ref = useRef<HTMLDialogElement>(null);
+  // 原生 dialog：focus trap / Esc / ::backdrop 全部免费
+  useEffect(() => { ref.current?.showModal(); }, []);
   const normalized = { ...p, nickname: p.nickname.trim(), schoolName: p.schoolName.trim() };
   const canSave = normalized.nickname !== '' && normalized.schoolName !== '';
   const save = () => {
@@ -14,8 +17,9 @@ export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onS
     onClose();
   };
   return (
-    <div className="id-editor-backdrop" onClick={onClose}>
-      <div className="id-editor" onClick={(e) => e.stopPropagation()}>
+    // 点 ::backdrop 时 click target 是 dialog 自身（内容区点击 target 是内层 div）
+    <dialog ref={ref} className="id-editor-dialog" onClose={onClose} onClick={(e) => { if (e.target === ref.current) onClose(); }}>
+      <div className="id-editor">
         <h3>设置发送身份</h3>
         <label>昵称<input value={p.nickname} onChange={(e) => setP({ ...p, nickname: e.target.value })} /></label>
         <label>学校<input value={p.schoolName} onChange={(e) => setP({ ...p, schoolName: e.target.value })} /></label>
@@ -32,6 +36,6 @@ export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onS
         </div>
         <p className="id-hint">身份为自填，请文明发言。</p>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -8,11 +8,14 @@ const TRACKS = 5;
 const SPEED_PX_PER_S = 160; // 弹幕水平速度（像素/秒）：恒定，与屏幕宽度无关
 const TRACK_TOP_PCT = 8;    // 第 0 条轨道距顶 8%
 const TRACK_GAP_PCT = 5;    // 轨道间距 5% → 5 条落在 8%~28%，更密集
+// 高峰限流：每条飞行弹幕都是一个合成层，与 11 路视频解码抢资源；
+// 上限时丢弃新弹幕（画面早已刷满，丢弃无感；聊天列表仍完整保留）。
+const MAX_CONCURRENT = 80;
 
-// 飞行距离固定为 220vw（见 keyframe dm-move）= 2.2×视口宽 px；
-// 时长 = 距离 / 速度，于是任意屏宽下都是同一 px/s（宽屏不再变快）。
+// 飞行距离固定为 140vw（见 keyframe dm-move）= 1.4×视口宽 px：100vw 出屏 + 40vw
+// 容纳自身宽度的余量。时长 = 距离 / 速度，任意屏宽下都是同一 px/s（宽屏不再变快）。
 function flyDurationMs(): number {
-  return (window.innerWidth * 2.2) / SPEED_PX_PER_S * 1000;
+  return (window.innerWidth * 1.4) / SPEED_PX_PER_S * 1000;
 }
 
 interface Flying { key: string; d: Danmaku; track: number; durationMs: number; }
@@ -38,14 +41,19 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
       trackRR.current += 1;
       return { key: `${dedupeKey(d)}-${trackRR.current}`, d, track, durationMs: flyDurationMs() };
     });
-    setFlying((f) => [...f, ...nextFlying]);
+    setFlying((f) => {
+      const room = MAX_CONCURRENT - f.length;
+      if (room <= 0) return f;
+      return room >= nextFlying.length ? [...f, ...nextFlying] : [...f, ...nextFlying.slice(0, room)];
+    });
   }, [messages]);
 
   // 飞完（动画结束）即移除。hover 暂停时动画不结束，故不会半途消失。
   const handleEnd = (key: string) => setFlying((f) => f.filter((x) => x.key !== key));
 
   return (
-    <div className="dm-overlay">
+    // 与聊天列表内容重复，读屏不该念两遍
+    <div className="dm-overlay" aria-hidden="true">
       {flying.map(({ key, d, track, durationMs }) => (
         <div
           key={key}

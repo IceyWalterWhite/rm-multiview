@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { StreamView } from '../types';
 import type { QualityLabel } from '../config';
 import { VideoPlayer } from './VideoPlayer';
@@ -11,7 +12,7 @@ interface Props {
   onSignatureExpired?: () => void;
 }
 
-export function ViewTile({ view, quality, enlarged, onToggle, onSignatureExpired }: Props) {
+export const ViewTile = memo(function ViewTile({ view, quality, enlarged, onToggle, onSignatureExpired }: Props) {
   return (
     <button
       className={`view-tile ${view.side}${enlarged ? ' enlarged' : ''}`}
@@ -21,4 +22,4 @@ export function ViewTile({ view, quality, enlarged, onToggle, onSignatureExpired
       <VideoPlayer src={srcForQuality(view, quality)} className="view-tile-video" onSignatureExpired={onSignatureExpired} />
     </button>
   );
-}
+});

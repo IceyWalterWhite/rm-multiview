@@ -1,10 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DanmakuComposer } from './DanmakuComposer';
 import { DEFAULT_PROFILE } from '../hooks/useProfile';
 
 describe('DanmakuComposer', () => {
+  it('sends on Enter keydown', async () => {
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const profile = { ...DEFAULT_PROFILE, nickname: 'UserA', schoolName: 'A大学', position: '校友' };
+    render(<DanmakuComposer profile={profile} isComplete onSend={onSend} onEditIdentity={() => {}} />);
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '哈哈');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalledWith('哈哈');
+  });
+  it('does not send when Enter confirms an IME candidate (isComposing)', async () => {
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const profile = { ...DEFAULT_PROFILE, nickname: 'UserA', schoolName: 'A大学', position: '校友' };
+    render(<DanmakuComposer profile={profile} isComplete onSend={onSend} onEditIdentity={() => {}} />);
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, 'zhongwen');
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(onSend).not.toHaveBeenCalled();
+  });
   it('calls onSend with typed text and clears input', async () => {
     const onSend = vi.fn().mockResolvedValue(undefined);
     const profile = { ...DEFAULT_PROFILE, nickname: 'UserA', schoolName: 'A大学', position: '校友' };

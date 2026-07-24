@@ -46,6 +46,14 @@ const hlsMock = vi.hoisted(() => {
 
 vi.mock('hls.js', () => ({ default: hlsMock.MockHls }));
 
+// hls.js 是动态 import 的：等一个微任务让实例创建完成
+async function getHls() {
+  await act(async () => { await Promise.resolve(); });
+  const hls = hlsMock.instances[0];
+  expect(hls).toBeDefined();
+  return hls;
+}
+
 function setVisibility(state: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: state });
   Object.defineProperty(document, 'hidden', { configurable: true, value: state === 'hidden' });
@@ -92,10 +100,10 @@ describe('useHlsPlayer', () => {
     vi.restoreAllMocks();
   });
 
-  it('stops loading while hidden and wakes the stream when visible again without refreshing signatures', () => {
+  it('stops loading while hidden and wakes the stream when visible again without refreshing signatures', async () => {
     const onExpired = vi.fn();
     render(<Harness onExpired={onExpired} />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     act(() => {
       hls.emit(hlsMock.MockHls.Events.FRAG_BUFFERED);
@@ -111,9 +119,9 @@ describe('useHlsPlayer', () => {
     expect(playSpy).toHaveBeenCalled();
   });
 
-  it('does not stop a side stream while its first load is still in progress', () => {
+  it('does not stop a side stream while its first load is still in progress', async () => {
     render(<Harness />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     dispatchVisibilityChange('hidden');
 
@@ -122,9 +130,9 @@ describe('useHlsPlayer', () => {
     expect(screen.getByTestId('state')).toHaveTextContent('ok');
   });
 
-  it('keeps the main stream loading while hidden when requested', () => {
+  it('keeps the main stream loading while hidden when requested', async () => {
     render(<Harness keepAliveWhenHidden />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     dispatchVisibilityChange('hidden');
 
@@ -134,10 +142,10 @@ describe('useHlsPlayer', () => {
     expect(screen.getByTestId('state')).toHaveTextContent('ok');
   });
 
-  it('continues signature refresh handling for a kept-alive hidden stream', () => {
+  it('continues signature refresh handling for a kept-alive hidden stream', async () => {
     const onExpired = vi.fn();
     render(<Harness keepAliveWhenHidden onExpired={onExpired} />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     dispatchVisibilityChange('hidden');
     act(() => {
@@ -152,10 +160,10 @@ describe('useHlsPlayer', () => {
     expect(onExpired).toHaveBeenCalled();
   });
 
-  it('does not restart a kept-alive main stream when returning visible', () => {
+  it('does not restart a kept-alive main stream when returning visible', async () => {
     const onExpired = vi.fn();
     render(<Harness keepAliveWhenHidden onExpired={onExpired} />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     dispatchVisibilityChange('hidden');
     dispatchVisibilityChange('visible');
@@ -166,9 +174,9 @@ describe('useHlsPlayer', () => {
     expect(playSpy).toHaveBeenCalled();
   });
 
-  it('does not show a retry overlay for fatal network errors raised in a hidden tab', () => {
+  it('does not show a retry overlay for fatal network errors raised in a hidden tab', async () => {
     render(<Harness />);
-    const hls = hlsMock.instances[0];
+    const hls = await getHls();
 
     act(() => {
       hls.emit(hlsMock.MockHls.Events.FRAG_BUFFERED);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ZoneCatalog, Profile } from './types';
 import type { DanmakuConnection } from './net/leancloud';
 import { useProfile } from './hooks/useProfile';
@@ -23,8 +23,24 @@ export default function App() {
     [chatRoomId],
   );
 
+  // 原始错误只进控制台（用户看友好文案）；放 effect 里，进入 error 态时打一条而非每次渲染都打
+  const errMessage = state.status === 'error' ? state.message : null;
+  useEffect(() => {
+    if (errMessage !== null) console.error('[App] catalog load failed:', errMessage);
+  }, [errMessage]);
+
+  if (state.status === 'loading') return <div className="loading">直播加载中…</div>;
   if (state.status === 'ended') return <OfflineView />;
-  if (state.status === 'error') return <div className="fatal">⚠ 加载失败：{state.message}</div>;
+  if (state.status === 'error') {
+    return (
+      <div className="fatal">
+        <div>
+          <p>⚠ 直播信息加载失败，请检查网络后重试</p>
+          <button className="send-btn" onClick={() => location.reload()}>重试</button>
+        </div>
+      </div>
+    );
+  }
   if (state.status !== 'live' || !connFactory) return null;
   return (
     <Live
@@ -48,9 +64,11 @@ interface LiveProps {
 }
 
 function Live(props: LiveProps) {
-  const { catalog, connFactory } = props;
+  const { catalog, connFactory, profile, setEditing } = props;
   const { messages, status, send } = useDanmaku(connFactory);
-  const onSend = (text: string) => send(text, props.profile);
+  // Live 每批弹幕都重渲染；回调引用稳定，DanmakuComposer/QualityControls 的 memo 才有效
+  const onSend = useCallback((text: string) => send(text, profile), [send, profile]);
+  const onEditIdentity = useCallback(() => setEditing(true), [setEditing]);
   return (
     <div className="app">
       {status !== 'connected' && (
@@ -60,14 +78,14 @@ function Live(props: LiveProps) {
         catalog={catalog} messages={messages}
         mainQuality={props.mainQuality} multiQuality={props.multiQuality}
         setMainQuality={props.setMainQuality} setMultiQuality={props.setMultiQuality}
-        profile={props.profile} isComplete={props.isComplete}
-        onSend={onSend} onEditIdentity={() => props.setEditing(true)}
+        profile={profile} isComplete={props.isComplete}
+        onSend={onSend} onEditIdentity={onEditIdentity}
         onSignatureExpired={props.onSignatureExpired}
       />
       <ChatSection
         zoneName={catalog.zoneName} messages={messages}
-        profile={props.profile} isComplete={props.isComplete}
-        onSend={onSend} onEditIdentity={() => props.setEditing(true)}
+        profile={profile} isComplete={props.isComplete}
+        onSend={onSend} onEditIdentity={onEditIdentity}
       />
       {props.editing && (
         <IdentityEditor value={props.profile} onSave={props.setProfile} onClose={() => props.setEditing(false)} />

@@ -26,7 +26,7 @@ describe('ReservedPanel', () => {
 
   it('switches the embedded site (and the open target) when the other tab is clicked', async () => {
     render(<ReservedPanel />);
-    await userEvent.click(screen.getByRole('button', { name: 'RM天梯榜' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'RM天梯榜' }));
 
     expect(screen.getByTitle('RM天梯榜')).toBeVisible();
     expect(screen.getByTitle('华南虎赛程分析软件')).not.toBeVisible();
@@ -35,8 +35,8 @@ describe('ReservedPanel', () => {
 
   it('keeps a visited site mounted after switching away (no reload on return)', async () => {
     render(<ReservedPanel />);
-    await userEvent.click(screen.getByRole('button', { name: 'RM天梯榜' }));
-    await userEvent.click(screen.getByRole('button', { name: '华南虎赛程分析软件' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'RM天梯榜' }));
+    await userEvent.click(screen.getByRole('tab', { name: '华南虎赛程分析软件' }));
 
     // Back on the schedule, but the ladder iframe stays mounted (hidden) so returning won't reload it.
     expect(screen.getByTitle('华南虎赛程分析软件')).toBeVisible();

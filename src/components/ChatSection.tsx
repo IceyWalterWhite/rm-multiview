@@ -9,7 +9,7 @@ interface Props {
 
 export function ChatSection(p: Props) {
   return (
-    <section className="chat-section">
+    <section className="chat-section" aria-label="聊天与社区">
       <ReservedPanel />
       <ChatRoom zoneName={p.zoneName} messages={p.messages} profile={p.profile} isComplete={p.isComplete} onSend={p.onSend} onEditIdentity={p.onEditIdentity} />
     </section>

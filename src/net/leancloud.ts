@@ -1,4 +1,5 @@
-import { Realtime, TextMessage, Event } from 'leancloud-realtime';
+// SDK（约 280KB）动态 import：不进首包，无直播（不连弹幕）时永不下载。
+import type { Realtime, TextMessage as TextMessageType } from 'leancloud-realtime';
 import { LEANCLOUD } from '../config';
 import type { Profile } from '../types';
 
@@ -22,7 +23,7 @@ interface Conversation {
   transient: boolean;
   join(): Promise<unknown>;
   queryMessages(options: { limit: number }): Promise<LCMessage[]>;
-  send(msg: TextMessage): Promise<LCMessage>;
+  send(msg: TextMessageType): Promise<LCMessage>;
 }
 
 interface LCMessage {
@@ -39,13 +40,16 @@ function randomClientId(): string {
 }
 
 // Realtime 对同一 appId 是单例：重复 `new Realtime` 会抛 "App is already
-// initialized"（React StrictMode 双挂载 / HMR 会触发）。模块级缓存复用。
-let realtimeSingleton: Realtime | null = null;
-function getRealtime(): Realtime {
-  if (!realtimeSingleton) {
-    realtimeSingleton = new Realtime({ appId: LEANCLOUD.appId, appKey: LEANCLOUD.appKey, server: LEANCLOUD.server });
+// initialized"（React StrictMode 双挂载 / HMR 会触发）。缓存 Promise 复用，
+// 并发调用共享同一次 SDK 加载与初始化。
+let realtimePromise: Promise<Realtime> | null = null;
+function getRealtime(): Promise<Realtime> {
+  if (!realtimePromise) {
+    realtimePromise = import('leancloud-realtime').then(
+      ({ Realtime }) => new Realtime({ appId: LEANCLOUD.appId, appKey: LEANCLOUD.appKey, server: LEANCLOUD.server }),
+    );
   }
-  return realtimeSingleton;
+  return realtimePromise;
 }
 
 // 连接也按 chatRoomId 缓存为单例：StrictMode 双挂载 / 多消费者都复用同一个
@@ -69,7 +73,10 @@ export function connectDanmaku(
 }
 
 async function createConnection(chatRoomId: string): Promise<DanmakuConnection> {
-  const realtime = getRealtime();
+  const [{ Event, TextMessage }, realtime] = await Promise.all([
+    import('leancloud-realtime'),
+    getRealtime(),
+  ]);
   const client = await realtime.createIMClient(randomClientId()) as unknown as IMClient;
   const conv: Conversation = await client.getConversation(chatRoomId);
   if (conv.transient) { try { await conv.join(); } catch { /* transient join may noop */ } }
@@ -81,11 +88,12 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
   };
 
   let handler: ((m: RawMessage) => void) | null = null;
+  let closed = false;
   const pending: RawMessage[] = []; // live messages arriving before onMessage is registered
   client.on(Event.MESSAGE, (message: unknown) => {
     const raw = toRaw(message as LCMessage);
     if (handler) handler(raw);
-    else pending.push(raw);
+    else if (!closed) pending.push(raw); // close 后丢弃，pending 不无界堆积
   });
 
   // 连接状态机：SDK 自带 WS 重连，但瞬态聊天室成员关系在重连后不自动恢复，
@@ -109,6 +117,7 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
 
   return {
     onMessage(cb) {
+      closed = false;
       handler = cb;
       history.forEach(cb);     // recent history first (oldest→newest)
       pending.forEach(cb);     // then any live messages buffered during setup
@@ -126,6 +135,12 @@ async function createConnection(chatRoomId: string): Promise<DanmakuConnection> 
       const sent = await conv.send(msg);
       return { id: String(sent.id ?? ''), text, attrs };
     },
-    async close() { /* no-op: keep the singleton connection alive for the SPA lifetime */ },
+    // 解绑本消费者的回调（换赛区后旧房间不再推给新列表），但保留底层
+    // IMClient/WS 单例存活——按挂载真关连接会拆掉 StrictMode 双挂载共享的推送通道。
+    async close() {
+      closed = true;
+      handler = null;
+      statusHandler = null;
+    },
   };
 }

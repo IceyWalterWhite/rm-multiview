@@ -22,6 +22,7 @@ export function useMatchTitle(
   useEffect(() => {
     let alive = true;
     const tick = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return; // 后台标签页不空拉
       try {
         const t = await fetcher(zoneName);
         if (alive) setState({ zoneName, title: t }); // 成功：有值则用，null 则回兜底

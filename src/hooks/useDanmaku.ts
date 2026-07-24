@@ -8,6 +8,10 @@ type ConnFactory = () => Promise<DanmakuConnection>;
 
 const RETRY_BASE_MS = 500;
 const RETRY_MAX_MS = 10000;
+// 弹幕高峰每条 WS 消息各占一个宏任务，React 不跨任务合并 setState——
+// 逐条上屏会把渲染频率推到消息速率（与 11 路视频解码抢主线程）。
+// 攒进缓冲、按窗口统一 flush，渲染频率封顶 1000/FLUSH_MS 次每秒。
+const FLUSH_MS = 200;
 
 function retryDelayMs(attempt: number): number {
   return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** attempt);
@@ -17,13 +21,29 @@ export function useDanmaku(connect: ConnFactory) {
   const [messages, setMessages] = useState<Danmaku[]>([]);
   const [status, setStatus] = useState<DanmakuStatus>('connecting');
   const connRef = useRef<DanmakuConnection | null>(null);
+  const bufRef = useRef<Danmaku[]>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = useCallback(() => {
+    flushTimerRef.current = null;
+    const batch = bufRef.current;
+    if (!batch.length) return;
+    bufRef.current = [];
+    setMessages((prev) => {
+      const next = prev.concat(batch);
+      return next.length > CHAT_BUFFER_LIMIT ? next.slice(next.length - CHAT_BUFFER_LIMIT) : next;
+    });
+  }, []);
 
   const push = useCallback((d: Danmaku) => {
-    setMessages((prev) => {
-      const next = prev.length >= CHAT_BUFFER_LIMIT ? prev.slice(prev.length - CHAT_BUFFER_LIMIT + 1) : prev.slice();
-      next.push(d);
-      return next;
-    });
+    const buf = bufRef.current;
+    buf.push(d);
+    if (buf.length > CHAT_BUFFER_LIMIT) buf.splice(0, buf.length - CHAT_BUFFER_LIMIT); // 缓冲同样有界
+    if (flushTimerRef.current === null) flushTimerRef.current = setTimeout(flush, FLUSH_MS);
+  }, [flush]);
+
+  useEffect(() => () => {
+    if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -42,7 +62,8 @@ export function useDanmaku(connect: ConnFactory) {
         if (!alive) { void conn.close(); return; }
         clearRetry();
         connRef.current = conn;
-        conn.onMessage((m) => push(messageToDanmaku(m.id, m.text, m.attrs)));
+        // alive 守卫：换赛区重连后，旧房间连接的推送不得再进当前列表
+        conn.onMessage((m) => { if (alive) push(messageToDanmaku(m.id, m.text, m.attrs)); });
         conn.onStatus((s) => { if (alive) setStatus(s); });
         setStatus('connected');
       }).catch((e) => {

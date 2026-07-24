@@ -1,8 +1,10 @@
+import { memo } from 'react';
 import type { Danmaku } from '../types';
 import { identityTag, danmakuColor } from '../data/danmaku';
 import { ANNIVERSARY_BADGE } from '../config';
 
-export function MessageItem({ d }: { d: Danmaku }) {
+// memo：每批新弹幕到达时列表重渲染，已有的几百条 item 引用未变，直接跳过
+export const MessageItem = memo(function MessageItem({ d }: { d: Danmaku }) {
   const color = danmakuColor(d);
   return (
     <div className="msg-item">
@@ -15,4 +17,4 @@ export function MessageItem({ d }: { d: Danmaku }) {
       <span className="msg-text">{d.text}</span>
     </div>
   );
-}
+});

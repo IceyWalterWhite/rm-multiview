@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 
 interface SiteTab { key: string; label: string; url: string; }
 
@@ -9,7 +9,8 @@ const SITES: SiteTab[] = [
   { key: 'fight', label: 'RM斗蛐蛐', url: 'https://rm.ecustcic.com/' },
 ];
 
-export function ReservedPanel() {
+// memo：零 props，杜绝被每批弹幕拖着重渲染（iframe 容器不该陪跑）
+export const ReservedPanel = memo(function ReservedPanel() {
   const [active, setActive] = useState(0);
   // 已访问过的 Tab：其 iframe 一经挂载即常驻，靠 display 切换，切回不重载、各自保留滚动/状态。
   const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
@@ -20,11 +21,13 @@ export function ReservedPanel() {
   const site = SITES[active];
   return (
     <div className="reserved-panel">
-      <div className="rp-tabs">
+      <div className="rp-tabs" role="tablist">
         {SITES.map((s, i) => (
           <button
             key={s.key}
             className={`rp-tab${i === active ? ' active' : ''}`}
+            role="tab"
+            aria-selected={i === active}
             onClick={() => open(i)}
           >
             {s.label}
@@ -37,7 +40,7 @@ export function ReservedPanel() {
           rel="noopener noreferrer"
           title={`在新标签页打开 ${site.label}`}
         >
-          ↗ 打开
+          <span aria-hidden="true">↗</span> 打开
         </a>
       </div>
       {/* 仅挂载访问过的站点 iframe：避免首屏并发加载三个第三方站点；挂载后常驻不重载 */}
@@ -48,10 +51,11 @@ export function ReservedPanel() {
             className="rp-frame"
             src={s.url}
             title={s.label}
+            role="tabpanel"
             style={{ display: i === active ? 'block' : 'none' }}
           />
         ) : null,
       )}
     </div>
   );
-}
+});

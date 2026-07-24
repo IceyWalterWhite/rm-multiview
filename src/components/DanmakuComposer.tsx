@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { Profile } from '../types';
 import { ANNIVERSARY_BADGE } from '../config';
 import { identityTag } from '../data/danmaku';
@@ -11,7 +11,7 @@ interface Props {
   variant?: 'bar' | 'panel'; // bar = 第一屏控制栏(横排); panel = 聊天室(身份成一栏，竖排)
 }
 
-export function DanmakuComposer({ profile, isComplete, onSend, onEditIdentity, variant = 'bar' }: Props) {
+export const DanmakuComposer = memo(function DanmakuComposer({ profile, isComplete, onSend, onEditIdentity, variant = 'bar' }: Props) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -33,19 +33,23 @@ export function DanmakuComposer({ profile, isComplete, onSend, onEditIdentity, v
     <div className={`composer composer--${variant}`}>
       <button className="id-chip" onClick={onEditIdentity} title="编辑身份">
         {profile.badge === ANNIVERSARY_BADGE && <i className="chip-badge" />}
-        {chip} ✎
+        {chip} <span aria-hidden="true">✎</span>
       </button>
       <div className="composer-row">
         <input
           className="composer-input"
           placeholder="发一个友善的评论~"
+          enterKeyHint="send"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+          onKeyDown={(e) => {
+            // 中文输入法里 Enter 是「确认候选词」（isComposing），不能当发送
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
+          }}
         />
         <button className="send-btn" onClick={submit} disabled={busy}>发送</button>
       </div>
       {err && <span className="composer-error" role="alert">{err}</span>}
     </div>
   );
-}
+});

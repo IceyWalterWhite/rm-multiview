@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { useHlsPlayer } from '../hooks/useHlsPlayer';
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   keepAliveWhenHidden?: boolean;
 }
 
-export function VideoPlayer({ src, muted = true, className, onSignatureExpired, keepAliveWhenHidden = false }: Props) {
+export const VideoPlayer = memo(function VideoPlayer({ src, muted = true, className, onSignatureExpired, keepAliveWhenHidden = false }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
   const { error } = useHlsPlayer(ref, src, onSignatureExpired, { keepAliveWhenHidden });
   return (
@@ -18,4 +18,4 @@ export function VideoPlayer({ src, muted = true, className, onSignatureExpired, 
       {error && <div className="video-retry">信号中断 · 重连中…</div>}
     </div>
   );
-}
+});

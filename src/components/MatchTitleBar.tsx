@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 const SPEED_PX_PER_S = 25; // 照搬官方滚动速度
 
@@ -8,7 +8,7 @@ interface Props {
   fallback: string; // 无赛事数据时的兜底文案
 }
 
-export function MatchTitleBar({ text, isNext, fallback }: Props) {
+export const MatchTitleBar = memo(function MatchTitleBar({ text, isNext, fallback }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const display = text ? (isNext ? '下一场 ' : '') + text : fallback;
@@ -63,4 +63,4 @@ export function MatchTitleBar({ text, isNext, fallback }: Props) {
       )}
     </div>
   );
-}
+});

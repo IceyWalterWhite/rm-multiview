@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
@@ -26,9 +26,11 @@ export function LiveStage(p: Props) {
   const [enlargedRed, setEnlargedRed] = useState<string | null>(null);
   const [enlargedBlue, setEnlargedBlue] = useState<string | null>(null);
   const [tooNarrow, setTooNarrow] = useState(false);
+  const [danmakuOn, setDanmakuOn] = useState(true);
   const rowRef = useRef<HTMLDivElement>(null);
-  const toggleRed = (id: string) => setEnlargedRed((cur) => (cur === id ? null : id));
-  const toggleBlue = (id: string) => setEnlargedBlue((cur) => (cur === id ? null : id));
+  // useCallback：引用稳定才不会击穿 SideColumn 的 memo（弹幕批次不该重渲染 11 路机位）
+  const toggleRed = useCallback((id: string) => setEnlargedRed((cur) => (cur === id ? null : id)), []);
+  const toggleBlue = useCallback((id: string) => setEnlargedBlue((cur) => (cur === id ? null : id)), []);
   const matchTitle = useMatchTitle(p.catalog.zoneName);
 
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
@@ -55,15 +57,16 @@ export function LiveStage(p: Props) {
   }, []);
 
   return (
-    <section className="live-stage">
+    <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} onSignatureExpired={p.onSignatureExpired} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
       <div className="controls">
         <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
+        <button className={`pill pill-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn}>弹幕</button>
         <DanmakuComposer profile={p.profile} isComplete={p.isComplete} onSend={p.onSend} onEditIdentity={p.onEditIdentity} />
         <span className="hint">点机位放大，再点缩回</span>
       </div>
