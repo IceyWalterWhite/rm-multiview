@@ -25,9 +25,11 @@ export const ReservedPanel = memo(function ReservedPanel() {
         {SITES.map((s, i) => (
           <button
             key={s.key}
+            id={`rp-tab-${s.key}`}
             className={`rp-tab${i === active ? ' active' : ''}`}
             role="tab"
             aria-selected={i === active}
+            aria-controls={`rp-panel-${s.key}`}
             onClick={() => open(i)}
           >
             {s.label}
@@ -48,10 +50,12 @@ export const ReservedPanel = memo(function ReservedPanel() {
         visited.has(i) ? (
           <iframe
             key={s.key}
+            id={`rp-panel-${s.key}`}
             className="rp-frame"
             src={s.url}
             title={s.label}
             role="tabpanel"
+            aria-labelledby={`rp-tab-${s.key}`}
             style={{ display: i === active ? 'block' : 'none' }}
           />
         ) : null,
