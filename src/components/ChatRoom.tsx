@@ -9,11 +9,12 @@ interface Props {
   messages: Danmaku[];
   profile: Profile;
   isComplete: boolean;
+  danmakuEnabled?: boolean; // false = 本场无聊天室，输入区换降级提示
   onSend: (text: string) => Promise<void> | void;
   onEditIdentity: () => void;
 }
 
-export function ChatRoom({ zoneName, messages, profile, isComplete, onSend, onEditIdentity }: Props) {
+export function ChatRoom({ zoneName, messages, profile, isComplete, danmakuEnabled = true, onSend, onEditIdentity }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   // 贴底才跟随：用户上翻看历史时，新消息不能把列表拽回底部
   const stickRef = useRef(true);
@@ -33,7 +34,11 @@ export function ChatRoom({ zoneName, messages, profile, isComplete, onSend, onEd
         {/* 同 id 可能因重发出现两次（见 danmaku.ts），key 用三元组合键 */}
         {messages.map((m) => <MessageItem key={dedupeKey(m)} d={m} />)}
       </div>
-      <DanmakuComposer profile={profile} isComplete={isComplete} onSend={onSend} onEditIdentity={onEditIdentity} variant="panel" />
+      {danmakuEnabled ? (
+        <DanmakuComposer profile={profile} isComplete={isComplete} onSend={onSend} onEditIdentity={onEditIdentity} variant="panel" />
+      ) : (
+        <div className="chatroom-disabled">本场直播未开启弹幕</div>
+      )}
     </div>
   );
 }

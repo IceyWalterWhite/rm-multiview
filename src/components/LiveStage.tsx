@@ -10,6 +10,7 @@ import { useMatchTitle } from '../hooks/useMatchTitle';
 interface Props {
   catalog: ZoneCatalog;
   messages: Danmaku[];
+  danmakuEnabled: boolean;
   mainQuality: QualityLabel;
   multiQuality: QualityLabel;
   setMainQuality: (q: QualityLabel) => void;
@@ -66,8 +67,12 @@ export function LiveStage(p: Props) {
       </div>
       <div className="controls">
         <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
-        <button className={`pill pill-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn}>弹幕</button>
-        <DanmakuComposer profile={p.profile} isComplete={p.isComplete} onSend={p.onSend} onEditIdentity={p.onEditIdentity} />
+        {p.danmakuEnabled && (
+          <>
+            <button className={`pill pill-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn}>弹幕</button>
+            <DanmakuComposer profile={p.profile} isComplete={p.isComplete} onSend={p.onSend} onEditIdentity={p.onEditIdentity} />
+          </>
+        )}
         <span className="hint">点机位放大，再点缩回</span>
       </div>
     </section>

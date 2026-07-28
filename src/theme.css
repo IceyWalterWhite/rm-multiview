@@ -89,6 +89,7 @@ button, input, select { font: inherit; }
 .chatroom-title { font-size:13px; color:#9aa0a6; border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:6px; }
 .chatroom-list { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:5px; }
 .chatroom .composer { margin-top:8px; }
+.chatroom-disabled { margin-top:8px; padding:8px 0; text-align:center; font-size:13px; color:#9aa0a6; border-top:1px solid var(--line); }
 /* 窄到聊天室(340px)比左侧嵌入页面还宽时：改上下堆叠，各占满整页宽、平分页高 */
 @media (max-width: 718px) {
   .chat-section { flex-direction: column; }

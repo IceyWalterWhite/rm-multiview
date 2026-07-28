@@ -41,7 +41,9 @@ export default function App() {
       </div>
     );
   }
-  if (state.status !== 'live' || !connFactory) return null;
+  if (state.status !== 'live') return null;
+  // connFactory 为 null（赛区无聊天室，如搭建直播）也照常渲染画面，弹幕降级隐藏——
+  // 2026-07-28 曾因这里 return null 造成整站白屏
   return (
     <Live
       catalog={state.catalog} connFactory={connFactory} onSignatureExpired={refresh}
@@ -55,7 +57,7 @@ export default function App() {
 
 interface LiveProps {
   catalog: ZoneCatalog;
-  connFactory: () => Promise<DanmakuConnection>;
+  connFactory: (() => Promise<DanmakuConnection>) | null;
   onSignatureExpired: () => void;
   mainQuality: QualityLabel; multiQuality: QualityLabel;
   setMainQuality: (q: QualityLabel) => void; setMultiQuality: (q: QualityLabel) => void;
@@ -65,17 +67,18 @@ interface LiveProps {
 
 function Live(props: LiveProps) {
   const { catalog, connFactory, profile, setEditing } = props;
+  const danmakuEnabled = connFactory !== null;
   const { messages, status, send } = useDanmaku(connFactory);
   // Live 每批弹幕都重渲染；回调引用稳定，DanmakuComposer/QualityControls 的 memo 才有效
   const onSend = useCallback((text: string) => send(text, profile), [send, profile]);
   const onEditIdentity = useCallback(() => setEditing(true), [setEditing]);
   return (
     <div className="app">
-      {status !== 'connected' && (
+      {danmakuEnabled && status !== 'connected' && (
         <div className="conn-status">{status === 'reconnecting' ? '弹幕重连中…' : '弹幕连接中…'}</div>
       )}
       <LiveStage
-        catalog={catalog} messages={messages}
+        catalog={catalog} messages={messages} danmakuEnabled={danmakuEnabled}
         mainQuality={props.mainQuality} multiQuality={props.multiQuality}
         setMainQuality={props.setMainQuality} setMultiQuality={props.setMultiQuality}
         profile={profile} isComplete={props.isComplete}
@@ -83,7 +86,7 @@ function Live(props: LiveProps) {
         onSignatureExpired={props.onSignatureExpired}
       />
       <ChatSection
-        zoneName={catalog.zoneName} messages={messages}
+        zoneName={catalog.zoneName} messages={messages} danmakuEnabled={danmakuEnabled}
         profile={profile} isComplete={props.isComplete}
         onSend={onSend} onEditIdentity={onEditIdentity}
       />

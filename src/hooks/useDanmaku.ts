@@ -17,7 +17,8 @@ function retryDelayMs(attempt: number): number {
   return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** attempt);
 }
 
-export function useDanmaku(connect: ConnFactory) {
+// connect 传 null = 本场无聊天室（如搭建直播）：不建连、messages 恒空，上层据此隐藏弹幕 UI
+export function useDanmaku(connect: ConnFactory | null) {
   const [messages, setMessages] = useState<Danmaku[]>([]);
   const [status, setStatus] = useState<DanmakuStatus>('connecting');
   const connRef = useRef<DanmakuConnection | null>(null);
@@ -47,6 +48,7 @@ export function useDanmaku(connect: ConnFactory) {
   }, []);
 
   useEffect(() => {
+    if (!connect) return;
     let alive = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 

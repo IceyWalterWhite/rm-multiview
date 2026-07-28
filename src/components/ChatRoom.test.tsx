@@ -22,6 +22,18 @@ function mockScrollBox(el: HTMLElement, scrollHeight: number, clientHeight: numb
   Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => clientHeight });
 }
 
+describe('ChatRoom danmaku disabled', () => {
+  it('shows a notice instead of the composer when danmaku is disabled', () => {
+    const props = { zoneName: 'z', profile: DEFAULT_PROFILE, isComplete: true, onSend: noop, onEditIdentity: noop };
+    const { container, getByText, queryByRole } = render(
+      <ChatRoom {...props} messages={[]} danmakuEnabled={false} />,
+    );
+    expect(getByText('本场直播未开启弹幕')).toBeInTheDocument();
+    expect(queryByRole('button', { name: '发送' })).toBeNull();
+    expect(container.querySelector('.composer-input')).toBeNull();
+  });
+});
+
 describe('ChatRoom auto-scroll', () => {
   it('follows new messages while the user is at the bottom', () => {
     const { list, rerenderWith } = renderRoom([mk('1', 'a')]);
