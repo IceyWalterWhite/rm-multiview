@@ -16,7 +16,7 @@ export function OfflineView() {
       <section className="live-stage offline-stage">
         <div>
           <div className="offline-title">⚠ 当前没有直播</div>
-          <a className="offline-hint" href="#community" onClick={scrollToCommunity}>下滑查看赛程 · 天梯榜 · 社区工具 ↓</a>
+          <a className="offline-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
         </div>
       </section>
       <section className="chat-section" id="community">
