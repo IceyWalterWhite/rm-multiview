@@ -1,26 +1,28 @@
 # rm-multiview · RoboMaster 多视角直播间
 
-纯前端重做的 RoboMaster 赛事多视角直播间：同时播 **11 路**官方真实直播流（主视角 + 红蓝各 5 机位），复刻其 **LeanCloud 弹幕**（十周年徽章 / 学校 / 身份 / 正文，红金两色），支持匿名自填身份发弹幕；第二屏内嵌社区工具站（赛程 / 天梯榜）+ 聊天室。**无后端**。
+纯前端重做的 RoboMaster 赛事多视角直播间：同时播 **11 路**官方真实直播流（主视角 + 红蓝各 5 机位），复刻其 **LeanCloud 弹幕**（十周年徽章 / 学校 / 身份 / 正文，红金两色），支持匿名自填身份发弹幕；第二屏内嵌社区工具站（赛程 / 天梯榜 / 斗蛐蛐）+ 聊天室。**无后端**。
 
 体验地址1: http://8.134.153.137
 
 体验地址2: https://rm-multiview.vercel.app/
 
+体验地址3（主站）: https://www.rmlive.cn （301 归一到 https://rmlive.cn）
+
 ![](image.png)
 
-> ⚠️ 赛事是赛季性的：仅在**有直播时段**（`live_game_info.json` 存在 `liveState===1` 的赛区）能正常加载，否则显示「本场直播已结束」。开发/测试靠 `src/fixtures/` 离线进行。
+> ⚠️ 赛事是赛季性的：仅在**有直播时段**（`live_game_info.json` 存在 `liveState===1` 的赛区）能正常加载，否则第一屏显示「当前没有直播」（第二屏社区工具照常可用）。开发/测试靠 `src/fixtures/` 离线进行。
 
 ## 运行
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173 —— 自动连接当前直播赛区
-npm run test     # 43 个单测（Vitest）
+npm run test     # 全量单测（Vitest）
 npm run build    # 生产构建（tsc -b && vite build → dist/）
 npm run lint     # ESLint
 ```
 
-打开后：主视角左上「🔇」解锁解说音；点机位原地放大、再点缩回（红蓝可各放大一个）；下滚到第二屏是内嵌站 + 聊天室，填好身份即可发弹幕。窗口太窄时第一屏会提示「请在大屏幕上观看」，第二屏会改为上下堆叠。
+打开后：主视角右上「🔇」解锁解说音；点机位原地放大、再点缩回或按 Esc（红蓝可各放大一个）；控制栏右侧「聊天室 · 社区工具 ↓」或直接下滚到第二屏，填好身份即可发弹幕。窗口太窄时第一屏会提示「请在大屏幕上观看」，第二屏会改为上下堆叠。
 
 ## 技术栈与架构
 
@@ -38,6 +40,7 @@ src/
   hooks/   useProfile|useDanmaku|useCatalog|useHlsPlayer.ts
   net/     leancloud.ts     # 连接(单例缓存)/收发/历史/重连
   singleFlight.ts           # 并发去重（N 路同时 403 只重取一次）
+  a11y.ts                   # prefers-reduced-motion 探测（smooth 滚动等运动降级）
   components/               # LiveStage/SideColumn/ViewTile/MainStage/DanmakuOverlay/
                             #   ChatRoom/MessageItem/DanmakuComposer/ReservedPanel(内嵌Tab)/…
   fixtures/                 # 真实抓包样本，供离线单测
