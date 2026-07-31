@@ -14,10 +14,13 @@ export const ReservedPanel = memo(function ReservedPanel() {
   const [active, setActive] = useState(0);
   // 已访问过的 Tab：其 iframe 一经挂载即常驻，靠 display 切换，切回不重载、各自保留滚动/状态。
   const [visited, setVisited] = useState<Set<number>>(() => new Set([0]));
+  // 已加载完成的 iframe：完成前保持面板底色（深色站里第三方页面加载期不闪白），onload 后淡入
+  const [loaded, setLoaded] = useState<Set<number>>(() => new Set());
   const open = (i: number) => {
     setActive(i);
     setVisited((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
   };
+  const markLoaded = (i: number) => setLoaded((prev) => (prev.has(i) ? prev : new Set(prev).add(i)));
   const site = SITES[active];
   return (
     <div className="reserved-panel">
@@ -51,11 +54,12 @@ export const ReservedPanel = memo(function ReservedPanel() {
           <iframe
             key={s.key}
             id={`rp-panel-${s.key}`}
-            className="rp-frame"
+            className={`rp-frame${loaded.has(i) ? ' rp-frame--loaded' : ''}`}
             src={s.url}
             title={s.label}
             role="tabpanel"
             aria-labelledby={`rp-tab-${s.key}`}
+            onLoad={() => markLoaded(i)}
             style={{ display: i === active ? 'block' : 'none' }}
           />
         ) : null,

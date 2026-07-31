@@ -81,4 +81,40 @@ describe('DanmakuOverlay', () => {
     expect(dNarrow).toBeGreaterThan(0);
     expect(dWide).toBeCloseTo(dNarrow * 2, 5); // 2× width → 2× duration → identical px/s
   });
+
+  // ===== 轨道调度（防同轨咬尾重叠）=====
+
+  it('assigns simultaneous danmaku to distinct tracks — never stacked on one line', () => {
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={[mk('a', 'AA'), mk('b', 'BB'), mk('c', 'CC')]} />);
+    const tops = [...document.querySelectorAll('.dm-fly')].map((el) => (el as HTMLElement).style.top);
+    expect(new Set(tops).size).toBe(3); // 三条同帧到达 → 三条不同轨道
+  });
+
+  it('drops burst overflow beyond the track count instead of overlapping', () => {
+    const msgs = Array.from({ length: 9 }, (_, i) => mk('b' + i, 'B' + i));
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={msgs} />);
+    // 9 条同帧爆发：5 条各占一轨，其余丢弃（聊天列表仍完整保留）
+    expect(document.querySelectorAll('.dm-fly').length).toBe(TRACKS_TO_FILL);
+  });
+
+  it('frees a track only after the previous occupant has tail-cleared', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    const first = Array.from({ length: 5 }, (_, i) => mk('f' + i, 'F' + i));
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={first} />);
+    expect(document.querySelectorAll('.dm-fly').length).toBe(5);
+
+    // 全轨占用中：立刻追加 → 丢弃，不同轨叠放（对象复用：重建会改变 sendTime → 变成"新"消息）
+    const x = mk('x', 'XX');
+    rerender(<DanmakuOverlay messages={[...first, x]} />);
+    expect(document.querySelectorAll('.dm-fly').length).toBe(5);
+
+    // 时间推进到所有尾部让出后：新弹幕可入轨
+    vi.setSystemTime(10_000 + 60_000);
+    rerender(<DanmakuOverlay messages={[...first, x, mk('y', 'YY')]} />);
+    expect(document.querySelectorAll('.dm-fly').length).toBe(6);
+  });
 });

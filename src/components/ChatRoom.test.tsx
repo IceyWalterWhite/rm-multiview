@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { ChatRoom } from './ChatRoom';
 import { DEFAULT_PROFILE } from '../hooks/useProfile';
 import type { Danmaku } from '../types';
@@ -56,5 +56,52 @@ describe('ChatRoom auto-scroll', () => {
   it('is keyboard scrollable', () => {
     const { list } = renderRoom([]);
     expect(list).toHaveAttribute('tabindex', '0');
+  });
+});
+
+describe('ChatRoom new-message pill', () => {
+  const pill = () => screen.queryByRole('button', { name: /有新消息/ });
+
+  it('shows a jump-to-bottom pill when messages arrive while reading history', () => {
+    const { list, rerenderWith } = renderRoom([mk('1', 'a')]);
+    mockScrollBox(list, 1000, 300);
+    list.scrollTop = 100; // 上翻
+    fireEvent.scroll(list);
+    rerenderWith([mk('1', 'a'), mk('2', 'b')]);
+    expect(pill()).toBeInTheDocument();
+  });
+
+  it('does not show the pill while stuck to the bottom', () => {
+    const { list, rerenderWith } = renderRoom([mk('1', 'a')]);
+    mockScrollBox(list, 1000, 300);
+    list.scrollTop = 700; // 贴底
+    fireEvent.scroll(list);
+    rerenderWith([mk('1', 'a'), mk('2', 'b')]);
+    expect(pill()).toBeNull();
+  });
+
+  it('clicking the pill returns to the bottom and hides it', () => {
+    const { list, rerenderWith } = renderRoom([mk('1', 'a')]);
+    mockScrollBox(list, 1000, 300);
+    // jsdom 无真实滚动；给 scrollTo 一个落到 scrollTop 的实现
+    list.scrollTo = ((o?: ScrollToOptions) => { list.scrollTop = Number(o?.top ?? 0); }) as typeof list.scrollTo;
+    list.scrollTop = 100;
+    fireEvent.scroll(list);
+    rerenderWith([mk('1', 'a'), mk('2', 'b')]);
+    fireEvent.click(pill()!);
+    expect(list.scrollTop).toBe(1000);
+    expect(pill()).toBeNull();
+  });
+
+  it('scrolling back to the bottom manually dismisses the pill', () => {
+    const { list, rerenderWith } = renderRoom([mk('1', 'a')]);
+    mockScrollBox(list, 1000, 300);
+    list.scrollTop = 100;
+    fireEvent.scroll(list);
+    rerenderWith([mk('1', 'a'), mk('2', 'b')]);
+    expect(pill()).toBeInTheDocument();
+    list.scrollTop = 700; // 手动拖回底
+    fireEvent.scroll(list);
+    expect(pill()).toBeNull();
   });
 });

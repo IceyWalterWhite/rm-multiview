@@ -72,6 +72,7 @@ function Live(props: LiveProps) {
   // Live 每批弹幕都重渲染；回调引用稳定，DanmakuComposer/QualityControls 的 memo 才有效
   const onSend = useCallback((text: string) => send(text, profile), [send, profile]);
   const onEditIdentity = useCallback(() => setEditing(true), [setEditing]);
+  const onCloseEditor = useCallback(() => setEditing(false), [setEditing]);
   return (
     <div className="app">
       {danmakuEnabled && status !== 'connected' && (
@@ -90,9 +91,8 @@ function Live(props: LiveProps) {
         profile={profile} isComplete={props.isComplete}
         onSend={onSend} onEditIdentity={onEditIdentity}
       />
-      {props.editing && (
-        <IdentityEditor value={props.profile} onSave={props.setProfile} onClose={() => props.setEditing(false)} />
-      )}
+      {/* 常驻挂载、open 驱动开合：原生 dialog 的关闭动画（allow-discrete）需要元素还在 DOM 里才播得完 */}
+      <IdentityEditor open={props.editing} value={props.profile} onSave={props.setProfile} onClose={onCloseEditor} />
     </div>
   );
 }

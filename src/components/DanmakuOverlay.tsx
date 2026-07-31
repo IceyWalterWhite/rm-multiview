@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Danmaku } from '../types';
-import { identityTag, danmakuColor, selectFreshDanmaku, dedupeKey } from '../data/danmaku';
+import {
+  identityTag, danmakuColor, selectFreshDanmaku, dedupeKey,
+  estimateDanmakuWidth, pickFreeTrack, trackBusyUntil,
+} from '../data/danmaku';
 import { ANNIVERSARY_BADGE } from '../config';
 import './DanmakuOverlay.css';
 
@@ -9,7 +12,7 @@ const SPEED_PX_PER_S = 160; // 弹幕水平速度（像素/秒）：恒定，与
 const TRACK_TOP_PCT = 8;    // 第 0 条轨道距顶 8%
 const TRACK_GAP_PCT = 5;    // 轨道间距 5% → 5 条落在 8%~28%，更密集
 // 高峰限流：每条飞行弹幕都是一个合成层，与 11 路视频解码抢资源；
-// 上限时丢弃新弹幕（画面早已刷满，丢弃无感；聊天列表仍完整保留）。
+// 轨道全忙或达上限时丢弃新弹幕（画面早已刷满，丢弃无感；聊天列表仍完整保留）。
 const MAX_CONCURRENT = 80;
 
 // 飞行距离固定为 140vw（见 keyframe dm-move）= 1.4×视口宽 px：100vw 出屏 + 40vw
@@ -23,7 +26,8 @@ interface Flying { key: string; d: Danmaku; track: number; durationMs: number; }
 export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
   const [flying, setFlying] = useState<Flying[]>([]);
   const seen = useRef(new Set<string>());
-  const trackRR = useRef(0);
+  const seq = useRef(0); // key 唯一性计数（同 dedupeKey 消息重飞时区分）
+  const busyUntil = useRef<number[]>(Array<number>(TRACKS).fill(0));
   const mountAt = useRef<number | null>(null); // 页面打开时刻：只飞此后到达的新弹幕
 
   useEffect(() => {
@@ -36,11 +40,17 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
     const { fresh, nextSeen } = selectFreshDanmaku(messages, mountAt.current, seen.current);
     seen.current = nextSeen;
     if (!fresh.length) return;
-    const nextFlying: Flying[] = fresh.map((d) => {
-      const track = trackRR.current % TRACKS;
-      trackRR.current += 1;
-      return { key: `${dedupeKey(d)}-${trackRR.current}`, d, track, durationMs: flyDurationMs() };
-    });
+    // 轨道调度：只投空闲轨道，杜绝同轨咬尾重叠（爆发时超出轨道数的部分丢弃）
+    const now = Date.now();
+    const nextFlying: Flying[] = [];
+    for (const d of fresh) {
+      const track = pickFreeTrack(busyUntil.current, now);
+      if (track === -1) continue;
+      busyUntil.current[track] = trackBusyUntil(now, estimateDanmakuWidth(d), SPEED_PX_PER_S);
+      seq.current += 1;
+      nextFlying.push({ key: `${dedupeKey(d)}-${seq.current}`, d, track, durationMs: flyDurationMs() });
+    }
+    if (!nextFlying.length) return;
     setFlying((f) => {
       const room = MAX_CONCURRENT - f.length;
       if (room <= 0) return f;

@@ -1,14 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Profile } from '../types';
 import { ANNIVERSARY_BADGE } from '../config';
 
 const POSITIONS = ['队员', '老队员', '校友'];
 
-export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onSave: (p: Profile) => void; onClose: () => void; }) {
+interface Props {
+  value: Profile;
+  onSave: (p: Profile) => void;
+  onClose: () => void;
+  /** 常驻挂载 + open 切换驱动原生 dialog 开合：关闭动画（allow-discrete）才有机会播完。
+      默认 true 兼容"条件挂载即打开"的旧用法。 */
+  open?: boolean;
+}
+
+// memo：常驻挂载后随父级弹幕批次重渲染，关着的对话框不该陪跑
+export const IdentityEditor = memo(function IdentityEditor({ value, onSave, onClose, open = true }: Props) {
   const [p, setP] = useState<Profile>(value);
   const ref = useRef<HTMLDialogElement>(null);
   // 原生 dialog：focus trap / Esc / ::backdrop 全部免费
-  useEffect(() => { ref.current?.showModal(); }, []);
+  useEffect(() => {
+    const dlg = ref.current;
+    if (!dlg) return;
+    if (open && !dlg.open) {
+      setP(value); // 每次打开都从当前身份出发（常驻挂载后 useState 初值只算一次）
+      dlg.showModal();
+    } else if (!open && dlg.open) {
+      dlg.close();
+    }
+  }, [open, value]);
   const normalized = { ...p, nickname: p.nickname.trim(), schoolName: p.schoolName.trim() };
   const canSave = normalized.nickname !== '' && normalized.schoolName !== '';
   const save = () => {
@@ -38,4 +57,4 @@ export function IdentityEditor({ value, onSave, onClose }: { value: Profile; onS
       </div>
     </dialog>
   );
-}
+});

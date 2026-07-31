@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
@@ -6,6 +6,7 @@ import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
 import { DanmakuComposer } from './DanmakuComposer';
 import { useMatchTitle } from '../hooks/useMatchTitle';
+import { prefersReducedMotion } from '../a11y';
 
 interface Props {
   catalog: ZoneCatalog;
@@ -34,6 +35,19 @@ export function LiveStage(p: Props) {
   const toggleBlue = useCallback((id: string) => setEnlargedBlue((cur) => (cur === id ? null : id)), []);
   const matchTitle = useMatchTitle(p.catalog.zoneName);
 
+  // Esc 收起放大的机位（wayfinding：任何状态都要有键盘退路）。
+  // 对话框开着时 Esc 属于对话框（原生 cancel），不越权抢收
+  useEffect(() => {
+    if (enlargedRed === null && enlargedBlue === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+      setEnlargedRed(null);
+      setEnlargedBlue(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [enlargedRed, enlargedBlue]);
+
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
   // 同时从 CSS 读取 .side-column 的真实 gap，动态设 --side-col-w 使 5 个 16:9 机位精确填满行高
   useEffect(() => {
@@ -57,6 +71,11 @@ export function LiveStage(p: Props) {
     return () => ro.disconnect();
   }, []);
 
+  const scrollToCommunity = (e: MouseEvent) => {
+    e.preventDefault();
+    document.getElementById('community')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  };
+
   return (
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
@@ -74,6 +93,8 @@ export function LiveStage(p: Props) {
           </>
         )}
         <span className="hint">点机位放大，再点缩回</span>
+        {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
+        <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>聊天室 · 社区工具 ↓</a>
       </div>
     </section>
   );
