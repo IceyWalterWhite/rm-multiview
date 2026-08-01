@@ -42,13 +42,17 @@ export const IdentityEditor = memo(function IdentityEditor({ value, onSave, onCl
         <h3>设置发送身份</h3>
         <label>昵称<input value={p.nickname} onChange={(e) => setP({ ...p, nickname: e.target.value })} /></label>
         <label>学校<input value={p.schoolName} onChange={(e) => setP({ ...p, schoolName: e.target.value })} /></label>
-        <label>身份
-          <select value={p.position} onChange={(e) => setP({ ...p, position: e.target.value })}>
-            {POSITIONS.map((x) => <option key={x} value={x}>{x}</option>)}
-          </select>
-        </label>
+        {/* 徽章开关与身份下拉同处一行：本行右侧有富余，徽章原本独占一行只是白占高度 */}
+        <div className="id-editor-row">
+          <label htmlFor="id-position">身份</label>
+          <div className="id-editor-control">
+            <label className="badge-toggle"><input type="checkbox" checked={p.badge === ANNIVERSARY_BADGE} onChange={(e) => setP({ ...p, badge: e.target.checked ? ANNIVERSARY_BADGE : '' })} /> 十周年徽章</label>
+            <select id="id-position" value={p.position} onChange={(e) => setP({ ...p, position: e.target.value })}>
+              {POSITIONS.map((x) => <option key={x} value={x}>{x}</option>)}
+            </select>
+          </div>
+        </div>
         <label>参赛年限<input type="number" min={0} value={p.racingAge} onChange={(e) => setP({ ...p, racingAge: Number(e.target.value) || 0 })} /></label>
-        <label><input type="checkbox" checked={p.badge === ANNIVERSARY_BADGE} onChange={(e) => setP({ ...p, badge: e.target.checked ? ANNIVERSARY_BADGE : '' })} /> 十周年徽章</label>
         <div className="id-editor-actions">
           <button onClick={onClose}>取消</button>
           <button className="primary" disabled={!canSave} onClick={save}>保存</button>

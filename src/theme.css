@@ -163,16 +163,31 @@ html { scroll-snap-type: y proximity; }
 /* 对话框：materialize 进出场（@starting-style + allow-discrete）。
    面板 scale .96→1 + 上浮 + 淡入；backdrop 同步淡入并轻微景深。
    不支持的浏览器退化为今天的瞬开瞬关，无损。 */
-.id-editor-dialog { padding:0; border:0; background:transparent; opacity:0; transform:scale(.96) translateY(10px); transition:opacity .2s cubic-bezier(.2,0,0,1), transform .2s cubic-bezier(.2,0,0,1), overlay .2s allow-discrete, display .2s allow-discrete; }
+/* UA 的 dialog:modal{overflow:auto; max-height:calc(100% - 6px - 2em)} 让对话框自己当滚动容器，
+   而它只是透明壳、卡片正好填满它 → 内容超高时被按硬矩形裁掉的正是卡片的边框与圆角
+   （滚到顶裁底边、滚到底裁顶边）。故解除壳的高度上限与裁剪，改由卡片自己限高并滚动。 */
+.id-editor-dialog { padding:0; border:0; background:transparent; max-height:100%; overflow:visible; opacity:0; transform:scale(.96) translateY(10px); transition:opacity .2s cubic-bezier(.2,0,0,1), transform .2s cubic-bezier(.2,0,0,1), overlay .2s allow-discrete, display .2s allow-discrete; }
 .id-editor-dialog[open] { opacity:1; transform:none; }
 @starting-style { .id-editor-dialog[open] { opacity:0; transform:scale(.96) translateY(10px); } }
 .id-editor-dialog::backdrop { background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .2s ease, overlay .2s allow-discrete, display .2s allow-discrete; }
 .id-editor-dialog[open]::backdrop { opacity:1; }
 @starting-style { .id-editor-dialog[open]::backdrop { opacity:0; } }
-.id-editor { background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:18px; width:300px; display:flex; flex-direction:column; gap:10px; }
+/* 限高+滚动落在卡片自身：滚的是内容，边框与圆角画在边框盒上，任何窗口高度都完整 */
+.id-editor { --field-w:11rem; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:18px; width:300px; max-width:calc(100dvw - 2rem); max-height:calc(100dvh - 2rem); overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+/* h3/p 的 UA 默认 margin（共 61px）与 flex gap 叠成双份间距，还把卡片凭空撑高。
+   清零改由 gap 统一控制；标题与脚注各留一点额外间距来建立层级（18px 与卡片内边距同宽） */
+.id-editor h3 { margin:0 0 8px; }
+.id-editor .id-hint { margin:4px 0 0; }
 .id-editor label { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.8125rem; }
 /* 勾选行例外：checkbox 与文字应相邻（space-between 会把二者推向两端） */
 .id-editor label:has(input[type="checkbox"]) { justify-content:flex-start; }
+/* 身份行：标签留在左侧，徽章开关与下拉框合成一个字段列靠右 */
+.id-editor-row { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:.8125rem; }
+.id-editor-row .badge-toggle { flex:none; gap:5px; cursor:pointer; }
+/* 字段列定宽：所有输入框与身份行的控件组共用同一条左右边缘。
+   参差的左边缘会被读成「没对齐好」，一条看不见的竖线才能让表单显得成立 */
+.id-editor input:not([type="checkbox"]), .id-editor-control { width:var(--field-w); }
+.id-editor-control { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .id-editor input,.id-editor select { background:var(--surface-0); border:1px solid var(--line); color:var(--ink); border-radius:5px; padding:4px 6px; }
 .id-editor-actions { display:flex; justify-content:flex-end; gap:8px; }
 .id-editor-actions button { background:#2a2f37; color:var(--ink); border:1px solid var(--line); border-radius:5px; padding:5px 12px; cursor:pointer; } /* 「取消」不再是 UA 浅灰件 */
