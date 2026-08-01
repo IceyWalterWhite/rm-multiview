@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, type ReactNode } from 'react';
 import type { Profile } from '../types';
 import { ANNIVERSARY_BADGE } from '../config';
 import { identityTag } from '../data/danmaku';
@@ -9,9 +9,10 @@ interface Props {
   onSend: (text: string) => Promise<void> | void;
   onEditIdentity: () => void;
   variant?: 'bar' | 'panel'; // bar = 第一屏控制栏(横排); panel = 聊天室(身份成一栏，竖排)
+  leading?: ReactNode; // 输入条内的前置控件（如弹幕开关），B 站式：开关与输入框同框
 }
 
-export const DanmakuComposer = memo(function DanmakuComposer({ profile, isComplete, onSend, onEditIdentity, variant = 'bar' }: Props) {
+export const DanmakuComposer = memo(function DanmakuComposer({ profile, isComplete, onSend, onEditIdentity, variant = 'bar', leading }: Props) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -31,6 +32,7 @@ export const DanmakuComposer = memo(function DanmakuComposer({ profile, isComple
 
   return (
     <div className={`composer composer--${variant}`}>
+      {leading}
       <button className="id-chip" onClick={onEditIdentity} title="编辑身份">
         {profile.badge === ANNIVERSARY_BADGE && <i className="chip-badge" />}
         {chip} <span aria-hidden="true">✎</span>

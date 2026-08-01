@@ -81,10 +81,11 @@ html { scroll-snap-type: y proximity; }
 .pill { background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:.8125rem; }
 .pill select { background:transparent; color:var(--accent); border:none; font-weight:700; }
 .pill option { background:var(--surface-2); color:var(--ink); } /* 防 UA 白底黄字（1.41:1） */
-.pill-toggle { cursor:pointer; color:var(--text-secondary); }
-.pill-toggle:hover { border-color:var(--line-strong); color:var(--ink); }
-.pill-toggle:active { transform:translateY(1px); }
-.pill-toggle.active { color:var(--accent); border-color:var(--accent); font-weight:700; }
+/* 弹幕开关：B 站式收进输入条内（同框不同高的两个框太丑），右侧细分隔线与身份 chip 断开 */
+.dm-toggle { flex:none; background:transparent; border:none; border-right:1px solid var(--line); border-radius:0; color:var(--text-secondary); font-size:.8125rem; padding:2px 10px 2px 4px; cursor:pointer; }
+.dm-toggle:hover { color:var(--ink); }
+.dm-toggle:active { transform:translateY(1px); }
+.dm-toggle.active { color:var(--accent); font-weight:700; }
 .composer { display:flex; align-items:center; gap:6px; background:var(--surface-0); border:1px solid var(--accent); border-radius:8px; padding:4px 6px; }
 .composer:focus-within { border-color:#fff; box-shadow:0 0 0 2px rgba(255,213,74,.35); }
 .composer--bar { flex:1; min-width:min(320px, 100%); }
@@ -202,9 +203,18 @@ html { scroll-snap-type: y proximity; }
   .id-editor-dialog::backdrop { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.7); }
 }
 
+/* 窄窗口控制栏渐进收纳：固定项合计 ~875px（清晰度 pill 246 + composer 最小 320 + 提示 248 + gap 40 + 页边 20），
+   低于该宽度会折成两行。优先舍弃教学提示（可自行发现），再压缩输入框，保住单行到 ~660px。 */
+@media (max-width: 980px) {
+  .controls .hint { display:none; }
+}
+@media (max-width: 830px) {
+  .composer--bar { min-width:min(240px, 100%); }
+}
+
 /* 触屏：44px 最小触摸目标；输入框 ≥16px 防 iOS 聚焦自动放大 */
 @media (pointer: coarse) {
-  .send-btn, .rp-tab, .id-chip, .rp-open, .mute-btn, .pill-toggle { min-height:44px; }
+  .send-btn, .rp-tab, .id-chip, .rp-open, .mute-btn, .dm-toggle { min-height:44px; }
   .rp-open { display:inline-flex; align-items:center; }
   .composer-input { font-size:1rem; }
 }
