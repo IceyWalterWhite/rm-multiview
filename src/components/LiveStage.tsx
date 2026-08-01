@@ -96,7 +96,6 @@ export function LiveStage(p: Props) {
             leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
           />
         )}
-        <span className="hint">点机位放大，再点缩回</span>
         {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
         <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
       </div>
