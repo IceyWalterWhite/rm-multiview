@@ -5,7 +5,9 @@ export const LEANCLOUD = {
   server: 'https://leancloud.robomaster.com',
 } as const;
 
+// 可用 VITE_LIVE_GAME_INFO_URL 覆盖（本地模拟直播回放：testdata/sync/mock-live.mjs）
 export const LIVE_GAME_INFO_URL =
+  import.meta.env.VITE_LIVE_GAME_INFO_URL ??
   'https://rm-static.djicdn.com/live_json/live_game_info.json';
 
 export const CURRENT_MATCHES_URL =

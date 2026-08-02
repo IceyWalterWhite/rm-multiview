@@ -4,9 +4,17 @@ import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
 import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
+import { SyncControl } from './SyncControl';
 import { DanmakuComposer } from './DanmakuComposer';
 import { useMatchTitle } from '../hooks/useMatchTitle';
 import { prefersReducedMotion } from '../a11y';
+import { SyncEngine } from '../sync/engine';
+import { AudioCalibrator, createAdtsDecoder } from '../sync/audioCalib';
+import { demuxAudio } from '../sync/tsDemux';
+import { parseFragName } from '../sync/nameClock';
+
+const SYNC_PREF_KEY = 'rm.timecodeSync';
+const TRIM_KEY = 'rm.sync.trim';
 
 interface Props {
   catalog: ZoneCatalog;
@@ -34,6 +42,72 @@ export function LiveStage(p: Props) {
   const toggleRed = useCallback((id: string) => setEnlargedRed((cur) => (cur === id ? null : id)), []);
   const toggleBlue = useCallback((id: string) => setEnlargedBlue((cur) => (cur === id ? null : id)), []);
   const matchTitle = useMatchTitle(p.catalog.zoneName);
+
+  // 时码同步引擎：单例、引用稳定（memo 安全）；开关默认开，偏好入 localStorage
+  const engineRef = useRef<SyncEngine | null>(null);
+  if (engineRef.current === null) engineRef.current = new SyncEngine();
+  const syncEngine = engineRef.current;
+  // 音频校准器：吃 fLoader tee 下来的分片字节，比赛时测各路 δ 的 view 常量
+  const calibratorRef = useRef<AudioCalibrator | null>(null);
+  if (calibratorRef.current === null) {
+    calibratorRef.current = new AudioCalibrator(syncEngine, { decode: createAdtsDecoder() });
+  }
+  const calibrator = calibratorRef.current;
+  const [syncOn, setSyncOn] = useState(() => localStorage.getItem(SYNC_PREF_KEY) !== 'off');
+  const toggleSync = useCallback(() => setSyncOn((v) => !v), []);
+  const [syncTrim, setSyncTrim] = useState(() => {
+    const v = parseFloat(localStorage.getItem(TRIM_KEY) ?? '0');
+    return Number.isFinite(v) ? Math.max(-5, Math.min(5, v)) : 0;
+  });
+  const handleTrim = useCallback((sec: number) => setSyncTrim(sec), []);
+  useEffect(() => {
+    syncEngine.setTrim(syncTrim);
+    localStorage.setItem(TRIM_KEY, String(syncTrim));
+  }, [syncEngine, syncTrim]);
+  useEffect(() => {
+    syncEngine.setEnabled(syncOn);
+    if (syncOn) {
+      syncEngine.start();
+      // 分片字节 → demux 音频 + 分片名 → 校准缓冲（demux 数 ms/片，主线程可承受）
+      syncEngine.setByteSink((id, bytes, url, handle) => {
+        const name = parseFragName(url);
+        if (!name) return;
+        const d = demuxAudio(new Uint8Array(bytes));
+        if (d.frameCount === 0 || d.firstAudioPts === null || d.firstVideoPts === null) return;
+        calibrator.ingest(id, handle, {
+          nameSec: name.wallSec,
+          firstAudioPts: d.firstAudioPts,
+          firstVideoPts: d.firstVideoPts,
+          adts: d.adts,
+          sampleRate: d.sampleRate,
+          frameCount: d.frameCount,
+        });
+      });
+      calibrator.start();
+    } else {
+      syncEngine.stop();
+      syncEngine.setByteSink(null);
+      calibrator.stop();
+    }
+    localStorage.setItem(SYNC_PREF_KEY, syncOn ? 'on' : 'off');
+  }, [syncEngine, calibrator, syncOn]);
+  useEffect(
+    () => () => {
+      syncEngine.stop();
+      calibrator.stop();
+    },
+    [syncEngine, calibrator],
+  );
+  // 本地验收/调试句柄（仅 dev 构建）：console 里可手动触发校准、读各路状态
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    void import('../sync/xcorr').then(({ crossCorrelate }) => {
+      (window as unknown as Record<string, unknown>).__rmSync = { engine: syncEngine, calibrator, crossCorrelate };
+    });
+    return () => {
+      delete (window as unknown as Record<string, unknown>).__rmSync;
+    };
+  }, [syncEngine, calibrator]);
 
   // Esc 收起放大的机位（wayfinding：任何状态都要有键盘退路）。
   // 对话框开着时 Esc 属于对话框（原生 cancel），不越权抢收
@@ -79,13 +153,14 @@ export function LiveStage(p: Props) {
   return (
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
-        <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} />
-        <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
+        <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
+        <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
       <div className="controls">
         <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
+        <SyncControl on={syncOn} onToggle={toggleSync} trim={syncTrim} onTrim={handleTrim} />
         {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
         {p.danmakuEnabled && (
           <DanmakuComposer

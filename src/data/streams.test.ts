@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { srcForQuality, isSignatureExpiry } from './streams';
+import { srcForQuality, sourceForQuality, isSignatureExpiry } from './streams';
 import type { StreamView } from '../types';
 
 const view: StreamView = {
@@ -16,6 +16,19 @@ describe('srcForQuality', () => {
   });
   it('falls back to the first source when the label is absent', () => {
     expect(srcForQuality(view, '720p')).toBe('a.m3u8');
+  });
+});
+
+describe('sourceForQuality', () => {
+  it('returns the whole source so callers can read the REAL tier label', () => {
+    expect(sourceForQuality(view, '540p')).toEqual({ label: '540p', src: 'c.m3u8', res: '960x540' });
+  });
+  it('falls back with the fallback source own label (缺档回退时 tier 先验必须跟着源走)', () => {
+    // 请求 720p 回退到 1080p 源：label 必须是 1080p，否则时码同步套错 tier 常量
+    expect(sourceForQuality(view, '720p')?.label).toBe('1080p');
+  });
+  it('returns undefined for a view without sources', () => {
+    expect(sourceForQuality({ ...view, sources: [] }, '540p')).toBeUndefined();
   });
 });
 

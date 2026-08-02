@@ -88,6 +88,30 @@ html { scroll-snap-type: y proximity; }
 .dm-toggle:hover { color:var(--ink); }
 .dm-toggle:active { transform:translateY(1px); }
 .dm-toggle.active { color:var(--accent); font-weight:700; }
+
+/* 时码同步：开关沿用 dm-toggle 的激活语法（同样的事长同样的样，可预测）；
+   微调是二级披露，面板锚定触发器、从它长出来（transform-origin 右下 = 面板贴着按钮的角） */
+.sync-pill { position:relative; display:inline-flex; align-items:center; padding:0; white-space:nowrap; }
+.sync-toggle { background:transparent; border:none; color:var(--text-secondary); font-size:.8125rem; padding:4px 9px; cursor:pointer; border-radius:6px 0 0 6px; }
+.sync-toggle:hover { color:var(--ink); }
+.sync-toggle:active { transform:translateY(1px); }
+.sync-toggle.active { color:var(--accent); font-weight:700; }
+.sync-trim-btn { background:transparent; border:none; border-left:1px solid var(--line); color:var(--text-secondary); font-size:.75rem; padding:4px 8px; cursor:pointer; border-radius:0 6px 6px 0; }
+.sync-trim-btn:hover, .sync-trim-btn.active { color:var(--ink); }
+.sync-trim-btn:active { transform:translateY(1px); }
+.sync-panel { position:absolute; bottom:calc(100% + 8px); right:0; z-index:30; width:216px; box-sizing:border-box; padding:10px 12px; background:rgba(16,19,24,.92); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); border:1px solid var(--line-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.5); transform-origin:bottom right; animation:sync-panel-in .16s cubic-bezier(.2,0,0,1); }
+@keyframes sync-panel-in { from { opacity:0; transform:scale(.96) translateY(4px); } }
+.sync-panel-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.75rem; color:var(--text-secondary); }
+.sync-panel label { color:var(--ink); font-weight:700; }
+.sync-trim-value { color:var(--accent); font-variant-numeric:tabular-nums; }
+.sync-panel input[type=range] { width:100%; margin:8px 0 6px; accent-color:var(--accent); }
+.sync-panel-hint { font-size:.6875rem; }
+.sync-trim-reset { background:transparent; border:1px solid var(--line); border-radius:5px; color:var(--text-secondary); font-size:.6875rem; padding:2px 8px; cursor:pointer; }
+.sync-trim-reset:hover { color:var(--ink); border-color:var(--line-strong); }
+.sync-trim-reset:active { transform:translateY(1px); }
+/* 追赶角标：镜像 .match-title 的玻璃 chip 语法；瞬态出现、收敛即隐，不挡机位点击 */
+.sync-badge { position:absolute; top:4px; left:4px; z-index:3; pointer-events:none; font-size:.625rem; line-height:1.4; color:var(--ink); background:rgba(8,10,14,.55); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); border-radius:4px; padding:1px 6px; font-variant-numeric:tabular-nums; animation:sync-badge-in .16s cubic-bezier(.2,0,0,1); }
+@keyframes sync-badge-in { from { opacity:0; transform:translateY(2px); } }
 .composer { display:flex; align-items:center; gap:6px; background:var(--surface-0); border:1px solid var(--accent); border-radius:8px; padding:4px 6px; }
 .composer:focus-within { border-color:#fff; box-shadow:0 0 0 2px rgba(255,213,74,.35); }
 .composer--bar { flex:1; min-width:min(320px, 100%); }
@@ -217,6 +241,7 @@ html { scroll-snap-type: y proximity; }
   .new-msg-pill { animation:none; }
   .id-editor-dialog { transform:none; transition:opacity .15s ease, overlay .15s allow-discrete, display .15s allow-discrete; }
   @starting-style { .id-editor-dialog[open] { transform:none; } }
+  .sync-panel, .sync-badge { animation:none; }
 }
 
 /* 低透明度偏好：毛玻璃回退为近实色（保对比、去 blur） */
@@ -225,25 +250,27 @@ html { scroll-snap-type: y proximity; }
   .conn-status { -webkit-backdrop-filter:none; backdrop-filter:none; background:#3a2a00; }
   .new-msg-pill { -webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface-2); }
   .id-editor-dialog::backdrop { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.7); }
+  .sync-panel { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
+  .sync-badge { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
 }
 
-/* 窄窗口控制栏渐进收纳：固定项合计 ~744px（清晰度 pill 246 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
-   ≤830 先松开输入条最小宽（chip 高权重让位、输入框保基准），保住单行到 740px；
-   更窄则按下方 740px 断点主动堆成两行，绝不放任 flex 自行溢出。 */
-@media (max-width: 830px) {
+/* 窄窗口控制栏渐进收纳：固定项合计 ~874px（清晰度 pill 246 + 时码同步 pill ~130 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
+   ≤960 先松开输入条最小宽（chip 高权重让位、输入框保基准），保住单行到 780px；
+   更窄则按下方 780px 断点主动堆成两行，绝不放任 flex 自行溢出。 */
+@media (max-width: 960px) {
   .composer--bar { min-width:min(240px, 100%); }
 }
-/* 740px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
-   第一行 清晰度药丸 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
+/* 780px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
+   第一行 清晰度药丸 + 时码同步 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
    order 只调视觉行序，DOM/Tab 顺序不变 */
-@media (max-width: 740px) {
+@media (max-width: 780px) {
   .composer--bar { flex-basis:100%; order:1; }
   .composer--bar .id-chip { max-width:9rem; } /* 长身份让位给输入框 */
 }
 
 /* 触屏：44px 最小触摸目标；输入框 ≥16px 防 iOS 聚焦自动放大 */
 @media (pointer: coarse) {
-  .send-btn, .rp-tab, .id-chip, .rp-open, .mute-btn, .dm-toggle { min-height:44px; }
+  .send-btn, .rp-tab, .id-chip, .rp-open, .mute-btn, .dm-toggle, .sync-toggle, .sync-trim-btn { min-height:44px; }
   .rp-open { display:inline-flex; align-items:center; }
   .composer-input { font-size:1rem; }
 }
