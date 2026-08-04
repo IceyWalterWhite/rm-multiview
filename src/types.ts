@@ -39,6 +39,19 @@ export interface ZoneCatalog {
   blueViews: StreamView[];
 }
 
+export interface CheerTarget {
+  matchId: string;
+  redTeamId: string;
+  blueTeamId: string;
+  redLabel: string;
+  blueLabel: string;
+}
+
+export interface CheerInfo {
+  redVotes: number;
+  blueVotes: number;
+}
+
 export interface MatchTitle {
   text: string;     // 拼好的标题，如 "超级对抗赛 北部赛区 第68场 A大学 Alpha vs B大学 Beta"
   isNext: boolean;  // true = 用的是 nextMatch（下一场预告），由组件加「下一场 」前缀

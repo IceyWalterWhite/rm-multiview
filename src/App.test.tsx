@@ -4,9 +4,23 @@ import App from './App';
 import type { CatalogState } from './hooks/useCatalog';
 
 const mockState = vi.hoisted(() => ({ current: { status: 'loading' } as CatalogState }));
+const mockCheer = vi.hoisted(() => ({
+  current: {
+    redVotes: 2628,
+    blueVotes: 2397,
+    redLabel: 'A大学 Alpha',
+    blueLabel: 'B大学 Beta',
+    visible: true,
+    error: null as string | null,
+  },
+}));
 
 vi.mock('./hooks/useCatalog', () => ({
   useCatalog: () => ({ state: mockState.current, refresh: vi.fn() }),
+}));
+
+vi.mock('./hooks/useCheer', () => ({
+  useCheer: () => mockCheer.current,
 }));
 
 describe('App', () => {
@@ -27,7 +41,29 @@ describe('App', () => {
     expect(container.firstChild).not.toBeNull();
     expect(screen.getByText('本场直播未开启弹幕')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: '人气助威' })).toBeInTheDocument();
+    expect(screen.getByText('A大学 Alpha')).toBeInTheDocument();
+    expect(screen.getByText('B大学 Beta')).toBeInTheDocument();
+    expect(screen.getByText('2,628')).toBeInTheDocument();
+    expect(screen.getByText('2,397')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '发送' })).not.toBeInTheDocument();
+  });
+
+  it('does not mount an empty popularity bar without a current official match', () => {
+    mockCheer.current.visible = false;
+    mockState.current = {
+      status: 'live',
+      catalog: {
+        zoneName: '搭建直播',
+        chatRoomId: '',
+        main: { id: 'm', role: '主视角', side: 'main', sources: [] },
+        redViews: [],
+        blueViews: [],
+      },
+    };
+
+    render(<App />);
+    expect(screen.queryByRole('group', { name: '人气助威' })).not.toBeInTheDocument();
+    mockCheer.current.visible = true;
   });
 
   it('shows a loading indicator instead of a blank screen while catalog loads', () => {

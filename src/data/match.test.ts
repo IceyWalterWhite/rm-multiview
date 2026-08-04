@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCurrentMatch, formatMatchTitle, shortenEventName } from './match';
+import { parseCheerTarget, parseCurrentMatch, formatMatchTitle, shortenEventName } from './match';
 import type { MatchEntry } from './match';
 import sample from '../fixtures/current-and-next-matches.sample.json';
 
@@ -53,5 +53,32 @@ describe('parseCurrentMatch', () => {
   });
   it('returns null when the matched zone has neither current nor next match', () => {
     expect(parseCurrentMatch([{ currentMatch: null, nextMatch: null }], '北部赛区')).toBeNull();
+  });
+});
+
+describe('parseCheerTarget', () => {
+  const current = [{
+    currentMatch: {
+      id: 31228,
+      zone: { name: '北部赛区' },
+      redSide: { player: { team: { id: 3059, collegeName: 'A大学', name: 'Alpha' } } },
+      blueSide: { player: { team: { id: 739, collegeName: 'B大学', name: 'Beta' } } },
+    },
+    nextMatch: null,
+  }];
+
+  it('extracts current-match ids and official team labels', () => {
+    expect(parseCheerTarget(current, '北部赛区')).toEqual({
+      matchId: '31228',
+      redTeamId: '3059',
+      blueTeamId: '739',
+      redLabel: 'A大学 Alpha',
+      blueLabel: 'B大学 Beta',
+    });
+  });
+
+  it('never uses a next match or incomplete ids', () => {
+    expect(parseCheerTarget([{ currentMatch: null, nextMatch: current[0].currentMatch }], '北部赛区')).toBeNull();
+    expect(parseCheerTarget([{ currentMatch: { ...current[0].currentMatch, id: null } }], '北部赛区')).toBeNull();
   });
 });

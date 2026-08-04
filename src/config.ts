@@ -11,6 +11,10 @@ export const LIVE_GAME_INFO_URL =
 export const CURRENT_MATCHES_URL =
   'https://rm-static.djicdn.com/live_json/current_and_next_matches.json';
 
+export const CHEER_PROXY_PATH = '/api/cheer';
+export const CHEER_INFO_POLL_MS = 5_000;
+export const CHEER_TARGET_POLL_MS = 10_000;
+
 export const QUALITY_LABELS = ['1080p', '720p', '540p'] as const;
 export type QualityLabel = (typeof QUALITY_LABELS)[number];
 export const DEFAULT_MAIN_QUALITY: QualityLabel = '1080p';
