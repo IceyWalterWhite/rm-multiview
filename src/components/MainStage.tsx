@@ -6,7 +6,7 @@ import { DanmakuOverlay } from './DanmakuOverlay';
 import { MatchTitleBar } from './MatchTitleBar';
 import { srcForQuality } from '../data/streams';
 
-export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired }: {
+export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, onPlayingChange }: {
   main: StreamView;
   quality: QualityLabel;
   titleFallback: string;
@@ -15,6 +15,7 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
   showDanmaku: boolean;
   cheerSlot?: ReactNode;
   onSignatureExpired?: () => void;
+  onPlayingChange?: (playing: boolean) => void;
 }) {
   const [muted, setMuted] = useState(true); // 静音起播以满足浏览器自动播放策略；用户点击后解锁音频
   return (
@@ -28,6 +29,7 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
         muted={muted}
         className="main-video"
         onSignatureExpired={onSignatureExpired}
+        onPlayingChange={onPlayingChange}
         keepAliveWhenHidden
       />
       {showDanmaku && <DanmakuOverlay messages={messages} />}

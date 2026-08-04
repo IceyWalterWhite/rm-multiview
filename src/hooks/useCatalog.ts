@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ZoneCatalog } from '../types';
 import { fetchCatalog, NoLiveZoneError } from '../data/catalog';
-import { singleFlight } from '../singleFlight';
 
 export type CatalogState =
   | { status: 'loading' }
@@ -28,6 +27,7 @@ export function useCatalog(fetcher: Fetcher = fetchCatalog) {
   const [state, setState] = useState<CatalogState>({ status: 'loading' });
   const [retryAttempt, setRetryAttempt] = useState<number | null>(null);
   const lastSuccessAtRef = useRef(0);
+  const refreshFlightRef = useRef<Promise<void> | null>(null);
 
   const resetRefreshRetry = useCallback(() => setRetryAttempt(null), []);
 
@@ -57,9 +57,14 @@ export function useCatalog(fetcher: Fetcher = fetchCatalog) {
       scheduleRefreshRetry(); // 网络错不记成功时间，退避重试不受冷却阻挡
     }
   }, [fetcher, resetRefreshRetry, scheduleRefreshRetry]);
-  // singleFlight 只包装、不在 render 期调用 refreshImpl；规则无法静态区分包装与执行，误报
-  // eslint-disable-next-line react-hooks/refs
-  const refresh = useMemo(() => singleFlight(refreshImpl), [refreshImpl]);
+  const refresh = useCallback(() => {
+    if (refreshFlightRef.current) return refreshFlightRef.current;
+    const flight = refreshImpl().finally(() => {
+      if (refreshFlightRef.current === flight) refreshFlightRef.current = null;
+    });
+    refreshFlightRef.current = flight;
+    return flight;
+  }, [refreshImpl]);
 
   useEffect(() => {
     if (retryAttempt === null) return;

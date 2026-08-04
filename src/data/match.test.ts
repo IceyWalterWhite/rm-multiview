@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCheerTarget, parseCurrentMatch, formatMatchTitle, shortenEventName } from './match';
+import { parseCurrentMatch, parseCheerTarget, formatMatchTitle, shortenEventName } from './match';
 import type { MatchEntry } from './match';
 import sample from '../fixtures/current-and-next-matches.sample.json';
 
@@ -57,28 +57,49 @@ describe('parseCurrentMatch', () => {
 });
 
 describe('parseCheerTarget', () => {
-  const current = [{
+  // 夹具不带 team.id（标题不需要），助威用例自带含 id 的最小载荷
+  const zone = { name: '北部赛区', event: { title: 'RMUC 2026超级对抗赛' } };
+  const withIds = [{
     currentMatch: {
-      id: 31228,
-      zone: { name: '北部赛区' },
+      id: 31228, orderNumber: 68, zone,
       redSide: { player: { team: { id: 3059, collegeName: 'A大学', name: 'Alpha' } } },
       blueSide: { player: { team: { id: 739, collegeName: 'B大学', name: 'Beta' } } },
     },
-    nextMatch: null,
+    nextMatch: {
+      id: 31229, orderNumber: 69, zone,
+      redSide: { player: { team: { id: 900, collegeName: 'C大学', name: 'Gamma' } } },
+      blueSide: { player: { team: { id: 901, collegeName: 'D大学', name: 'Delta' } } },
+    },
   }];
 
-  it('extracts current-match ids and official team labels', () => {
-    expect(parseCheerTarget(current, '北部赛区')).toEqual({
-      matchId: '31228',
-      redTeamId: '3059',
-      blueTeamId: '739',
-      redLabel: 'A大学 Alpha',
-      blueLabel: 'B大学 Beta',
+  it('exposes ids as strings plus college+team labels', () => {
+    expect(parseCheerTarget(withIds, '北部赛区')).toEqual({
+      matchId: '31228', redTeamId: '3059', blueTeamId: '739',
+      redLabel: 'A大学 Alpha', blueLabel: 'B大学 Beta',
     });
   });
 
-  it('never uses a next match or incomplete ids', () => {
-    expect(parseCheerTarget([{ currentMatch: null, nextMatch: current[0].currentMatch }], '北部赛区')).toBeNull();
-    expect(parseCheerTarget([{ currentMatch: { ...current[0].currentMatch, id: null } }], '北部赛区')).toBeNull();
+  it('never falls back to nextMatch (下一场不能投票)', () => {
+    const onlyNext = [{ currentMatch: null, nextMatch: withIds[0].nextMatch }];
+    expect(parseCheerTarget(onlyNext, '北部赛区')).toBeNull();
+  });
+
+  it('returns null when a side has no player (数据里确实有 player: null)', () => {
+    const halfEmpty = [{ currentMatch: { ...withIds[0].currentMatch, blueSide: { player: null } } }];
+    expect(parseCheerTarget(halfEmpty, '北部赛区')).toBeNull();
+  });
+
+  it('returns null when the match id is missing', () => {
+    const noId = [{ currentMatch: { ...withIds[0].currentMatch, id: undefined } }];
+    expect(parseCheerTarget(noId, '北部赛区')).toBeNull();
+  });
+
+  it('returns null for an unknown zone or non-array input', () => {
+    expect(parseCheerTarget(withIds, '南部赛区')).toBeNull();
+    expect(parseCheerTarget(null, '北部赛区')).toBeNull();
+  });
+
+  it('returns null for the sample zone that only has a warmup nextMatch', () => {
+    expect(parseCheerTarget(sample, '东部赛区')).toBeNull();
   });
 });

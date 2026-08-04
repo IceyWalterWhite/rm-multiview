@@ -11,10 +11,6 @@ export const LIVE_GAME_INFO_URL =
 export const CURRENT_MATCHES_URL =
   'https://rm-static.djicdn.com/live_json/current_and_next_matches.json';
 
-export const CHEER_PROXY_PATH = '/api/cheer';
-export const CHEER_INFO_POLL_MS = 5_000;
-export const CHEER_TARGET_POLL_MS = 10_000;
-
 export const QUALITY_LABELS = ['1080p', '720p', '540p'] as const;
 export type QualityLabel = (typeof QUALITY_LABELS)[number];
 export const DEFAULT_MAIN_QUALITY: QualityLabel = '1080p';
@@ -32,18 +28,55 @@ export const ANNIVERSARY_BADGE = 'electronicTenth';
 
 export const CHAT_BUFFER_LIMIT = 300; // 与原站一致
 
-const CHEER_ART = 'https://rm-static.djicdn.com/documents/73177';
-export const CHEER_VS_ICON = `${CHEER_ART}/360ae03bf95431784015806496447875.png`;
+// —— 官方 SaaS 接口（bundle 里叫 sassUrl / voteURL）——
+//
+// saas.robomaster.com 的 CORS **按来源白名单**放行（实测）：OPTIONS 带
+// Origin: https://www.robomaster.com 才返回 Access-Control-Allow-Origin，带 https://rmlive.cn
+// 一律不返回，/registration/ 下四个路径全都如此。推论：任何触发预检的请求从本站必定失败，
+// 只有「简单请求」能出去（Content-Type 限 text/plain / x-www-form-urlencoded / multipart/form-data）。
+//
+// 普通网页上下文的逐条实测结果：
+//   getWatchProgress —— text/plain + credentials:'include' → 200，真读到数据（session cookie 是
+//                       SameSite=None，跨站能带上）；换 application/json 即预检失败。
+//   cheer/info       —— 强制 application/json（任何简单 content-type 都 415，GET+查询串 405），
+//                       浏览器直连无解；好在它免登录，改由服务端代理，见 functions/api/cheer.js。
+//   cheer/vote —— 强制 json，普通页面发不出去。生产站只允许本机安装的 Tampermonkey
+//                 直播助手通过固定动作桥接；Cookie 不经过本站服务端。
+//   watchHeartbeat —— 同样受限；只由本机直播助手在严格播放门槛下发起。
+export const SAAS_BASE = 'https://saas.robomaster.com';
+export const WATCH_PROGRESS_URL = `${SAAS_BASE}/registration/getWatchProgress`;
+
+/** 助威票数的同源代理（EdgeOne Pages Functions）。本地 vite dev 下该函数不存在 → 404，助威静默关闭。 */
+export const CHEER_PROXY_PATH = '/api/cheer';
+
+// DJI SSO 入口，backurl 回跳当前页
+export const RM_LOGIN_OAUTH_URL = 'https://www.robomaster.com/api/members/oauth';
+/** 官方直播页：脚本缺失、未登录或功能关闭时的可信降级入口。 */
+export const RM_OFFICIAL_LIVE_URL = 'https://www.robomaster.com/live';
+export const COMPANION_SCRIPT_URL = '/rmlive-companion.user.js';
+
+// 官方助威美术资源，直接引用其 CDN。
+// 依赖 index.html 的 <meta name="referrer" content="no-referrer">：rm-static 按 Referer 白名单
+// 做防盗链，带上我们的 Referer 会 403。改动那条 meta 前先确认这里还能加载。
+const RM_ART = 'https://rm-static.djicdn.com/documents/73177';
+/** 骑在接缝上的 VS 徽标（红 V 蓝 S 渐变） */
+export const CHEER_VS_ICON = `${RM_ART}/360ae03bf95431784015806496447875.png`;
+/** 助威飘字气泡：官方三种循环 like / fist / rocket，红蓝各一套 */
 export const CHEER_BUBBLES: Record<'red' | 'blue', readonly string[]> = {
   red: [
-    `${CHEER_ART}/76b0e36affe681784015779066819968.png`,
-    `${CHEER_ART}/0a8cdce1b699d1784015771982372480.png`,
-    `${CHEER_ART}/102f5f14e32461784015789171524243.png`,
+    `${RM_ART}/76b0e36affe681784015779066819968.png`,
+    `${RM_ART}/0a8cdce1b699d1784015771982372480.png`,
+    `${RM_ART}/102f5f14e32461784015789171524243.png`,
   ],
   blue: [
-    `${CHEER_ART}/9de4a71b732521784015749294932712.png`,
-    `${CHEER_ART}/ddf3e4516b8741784015739339995248.png`,
-    `${CHEER_ART}/603930231c22c1784015759547787918.png`,
+    `${RM_ART}/9de4a71b732521784015749294932712.png`,
+    `${RM_ART}/ddf3e4516b8741784015739339995248.png`,
+    `${RM_ART}/603930231c22c1784015759547787918.png`,
   ],
 };
+/** VS 位置夹取范围（照抄官方 vsLeft）：一边倒时徽标也不掉出条子 */
 export const CHEER_VS_CLAMP = { min: 8, max: 92 } as const;
+
+export const CHEER_INFO_POLL_MS = 5_000;   // 拉双方票数
+export const CHEER_TARGET_POLL_MS = 10_000; // 拉当前场次，与 useMatchTitle 同频
+export const WATCH_PROGRESS_REFRESH_MIN_MS = 30000;

@@ -5,9 +5,12 @@ import { useProfile } from './hooks/useProfile';
 import { useCatalog } from './hooks/useCatalog';
 import { useDanmaku, makeLiveConnFactory } from './hooks/useDanmaku';
 import { useCheer } from './hooks/useCheer';
-import { DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
-import { LiveStage } from './components/LiveStage';
+import { useWatchTask } from './hooks/useWatchTask';
+import { useOfficialBridge } from './hooks/useOfficialBridge';
+import { COMPANION_SCRIPT_URL, DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
 import { CheerBar } from './components/CheerBar';
+import { LiveStage } from './components/LiveStage';
+import { WatchTaskCapsule } from './components/WatchTaskCapsule';
 import { ChatSection } from './components/ChatSection';
 import { IdentityEditor } from './components/IdentityEditor';
 import { OfflineView } from './components/OfflineView';
@@ -71,18 +74,42 @@ function Live(props: LiveProps) {
   const { catalog, connFactory, profile, setEditing } = props;
   const danmakuEnabled = connFactory !== null;
   const { messages, status, send } = useDanmaku(connFactory);
-  const cheer = useCheer(catalog);
+  const [mainPlaying, setMainPlaying] = useState(false);
+
+  const bridge = useOfficialBridge();
+  const watchTask = useWatchTask({
+    bridge,
+    catalog,
+    mainPlaying,
+  });
+  const cheer = useCheer(catalog, {
+    bridge,
+    loggedIn: watchTask.loggedIn,
+  });
+  // visible=false 有两种来源：没有进行中的比赛，或同源代理没部署（本地 dev）。两种都该整条不出。
   const cheerSlot = cheer.visible ? (
     <CheerBar
-      redVotes={cheer.redVotes}
-      blueVotes={cheer.blueVotes}
-      redLabel={cheer.redLabel}
-      blueLabel={cheer.blueLabel}
-      canVote={false}
-      officialUrl=""
-      error={cheer.error}
+      redVotes={cheer.redVotes} blueVotes={cheer.blueVotes}
+      redLabel={cheer.redLabel} blueLabel={cheer.blueLabel}
+      canVote={cheer.canVote} onVote={cheer.vote}
+      officialUrl={cheer.officialUrl} error={cheer.error}
     />
   ) : null;
+  const watchTaskSlot = (
+    <WatchTaskCapsule
+      loggedIn={watchTask.loggedIn}
+      accumulatedSeconds={watchTask.accumulatedSeconds}
+      earnedPellets={watchTask.earnedPellets}
+      tiers={watchTask.tiers}
+      officialUrl={watchTask.officialUrl}
+      loginUrl={watchTask.loginUrl}
+      installUrl={COMPANION_SCRIPT_URL}
+      bridgeStatus={watchTask.bridgeStatus}
+      heartbeatStatus={watchTask.heartbeatStatus}
+      heartbeatError={watchTask.heartbeatError}
+      onRetryHeartbeat={watchTask.retryHeartbeat}
+    />
+  );
   // Live 每批弹幕都重渲染；回调引用稳定，DanmakuComposer/QualityControls 的 memo 才有效
   const onSend = useCallback((text: string) => send(text, profile), [send, profile]);
   const onEditIdentity = useCallback(() => setEditing(true), [setEditing]);
@@ -94,11 +121,12 @@ function Live(props: LiveProps) {
       )}
       <LiveStage
         catalog={catalog} messages={messages} danmakuEnabled={danmakuEnabled}
-        cheerSlot={cheerSlot}
+        cheerSlot={cheerSlot} watchTaskSlot={watchTaskSlot}
         mainQuality={props.mainQuality} multiQuality={props.multiQuality}
         setMainQuality={props.setMainQuality} setMultiQuality={props.setMultiQuality}
         profile={profile} isComplete={props.isComplete}
         onSend={onSend} onEditIdentity={onEditIdentity}
+        onMainPlayingChange={setMainPlaying}
         onSignatureExpired={props.onSignatureExpired}
       />
       <ChatSection

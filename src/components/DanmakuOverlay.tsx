@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Danmaku } from '../types';
 import {
   identityTag, danmakuColor, selectFreshDanmaku, dedupeKey,
@@ -23,8 +23,30 @@ function flyDurationMs(): number {
 
 interface Flying { key: string; d: Danmaku; track: number; durationMs: number; }
 
+function createFlyingStore() {
+  let value: Flying[] = [];
+  const listeners = new Set<() => void>();
+  const publish = (next: Flying[]) => {
+    if (next === value) return;
+    value = next;
+    listeners.forEach((listener) => listener());
+  };
+  return {
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener); },
+    getSnapshot: () => value,
+    append: (items: Flying[]) => {
+      const room = MAX_CONCURRENT - value.length;
+      if (room <= 0) return;
+      publish([...value, ...items.slice(0, room)]);
+    },
+    remove: (key: string) => publish(value.filter((item) => item.key !== key)),
+    clear: () => publish([]),
+  };
+}
+
 export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
-  const [flying, setFlying] = useState<Flying[]>([]);
+  const [store] = useState(createFlyingStore);
+  const flying = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const seen = useRef(new Set<string>());
   const seq = useRef(0); // key 唯一性计数（同 dedupeKey 消息重飞时区分）
   const busyUntil = useRef<number[]>(Array<number>(TRACKS).fill(0));
@@ -34,11 +56,28 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
     mountAt.current = Date.now();
   }, []);
 
+  // 回到前台：清空积压并释放轨道，从干净状态重新开始。
+  // 离开期间冻在半空的弹幕是过期内容（用户根本没看见），继续放完只会和新弹幕挤在一起。
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.hidden) return;
+      store.clear();
+      busyUntil.current.fill(0);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [store]);
+
   useEffect(() => {
     if (mountAt.current === null) return;
     // 只飞页面打开后的新消息；seen 随缓冲重建，长直播下不会无限增长。
     const { fresh, nextSeen } = selectFreshDanmaku(messages, mountAt.current, seen.current);
     seen.current = nextSeen;
+    // 后台标签页不投放：那里 CSS 动画不推进、animationend 不触发，投进去的只进不出，
+    // 而 busyUntil 按真实时间流逝照常释放轨道，于是一路堆到 MAX_CONCURRENT，
+    // 回到前台 80 条同时起飞——这就是「切后台再回来会爆发」的成因。
+    // 注意 seen 在上面已经照常更新：离开期间的弹幕不补放，聊天列表里仍然完整。
+    if (typeof document !== 'undefined' && document.hidden) return;
     if (!fresh.length) return;
     // 轨道调度：只投空闲轨道，杜绝同轨咬尾重叠（爆发时超出轨道数的部分丢弃）
     const now = Date.now();
@@ -51,15 +90,11 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
       nextFlying.push({ key: `${dedupeKey(d)}-${seq.current}`, d, track, durationMs: flyDurationMs() });
     }
     if (!nextFlying.length) return;
-    setFlying((f) => {
-      const room = MAX_CONCURRENT - f.length;
-      if (room <= 0) return f;
-      return room >= nextFlying.length ? [...f, ...nextFlying] : [...f, ...nextFlying.slice(0, room)];
-    });
-  }, [messages]);
+    store.append(nextFlying);
+  }, [messages, store]);
 
   // 飞完（动画结束）即移除。hover 暂停时动画不结束，故不会半途消失。
-  const handleEnd = (key: string) => setFlying((f) => f.filter((x) => x.key !== key));
+  const handleEnd = (key: string) => store.remove(key);
 
   return (
     // 与聊天列表内容重复，读屏不该念两遍

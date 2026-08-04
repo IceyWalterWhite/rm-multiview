@@ -14,6 +14,7 @@ interface Props {
   messages: Danmaku[];
   danmakuEnabled: boolean;
   cheerSlot?: ReactNode;
+  watchTaskSlot?: ReactNode;
   mainQuality: QualityLabel;
   multiQuality: QualityLabel;
   setMainQuality: (q: QualityLabel) => void;
@@ -23,6 +24,7 @@ interface Props {
   onSend: (text: string) => Promise<void> | void;
   onEditIdentity: () => void;
   onSignatureExpired?: () => void;
+  onMainPlayingChange?: (playing: boolean) => void;
 }
 
 export function LiveStage(p: Props) {
@@ -79,12 +81,13 @@ export function LiveStage(p: Props) {
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
       <div className="controls">
         <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
+        {p.watchTaskSlot}
         {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
         {p.danmakuEnabled && (
           <DanmakuComposer

@@ -1,0 +1,44 @@
+/* @deprecated Full fake-live demo styles. The active ?demo preview no longer imports this file. */
+
+/* 机位占位画面：按视角名 hash 的色相渐变 + 缓慢扫光，模拟"有画面在动" */
+.demo-feed {
+  position: absolute; inset: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(120% 90% at 30% 20%, hsl(var(--feed-hue) 45% 18%), transparent 60%),
+    linear-gradient(135deg, hsl(var(--feed-hue) 40% 14%), hsl(calc(var(--feed-hue) + 50) 45% 8%) 70%, #05070a);
+}
+.demo-feed::after {
+  content: ''; position: absolute; inset: -60% -30%;
+  background: linear-gradient(105deg, transparent 44%, rgba(255,255,255,.05) 50%, transparent 56%);
+  animation: demo-sheen 6s linear infinite;
+}
+.demo-feed__label {
+  position: relative; z-index: 1;
+  color: rgba(255,255,255,.85); font-size: .8125rem; letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,.8);
+}
+@keyframes demo-sheen { from { transform: translateX(-30%); } to { transform: translateX(30%); } }
+
+/* 右下角状态切换条：surface-2 毛玻璃小件 */
+/* 顶部右侧：底部会压住第一屏控制栏/第二屏输入区，顶部只轻掠机位一角 */
+.demo-switcher {
+  position: fixed; right: 12px; top: 12px; z-index: 60;
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(28,32,38,.82);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 4px 6px; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+}
+.demo-switcher__tag { color: var(--accent); font-size: .6875rem; font-weight: 700; letter-spacing: 1px; padding: 0 6px; border-right: 1px solid var(--line); }
+.demo-switcher a { color: var(--text-secondary); text-decoration: none; font-size: .75rem; padding: 3px 8px; border-radius: 999px; }
+.demo-switcher a:hover { color: var(--ink); }
+.demo-switcher a:active { transform: translateY(1px); }
+.demo-switcher a.active { background: var(--accent); color: var(--text-on-accent); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-feed::after { animation: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .demo-switcher { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface-2); }
+}

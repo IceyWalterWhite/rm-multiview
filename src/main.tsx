@@ -9,10 +9,24 @@ import './theme.css';
 // IP 直连、本机上都会白打 404，一律不挂
 const onVercel = location.hostname.endsWith('.vercel.app');
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-    {onVercel && <Analytics />}
-    {onVercel && <SpeedInsights />}
-  </React.StrictMode>
-);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+// ?demo=… → 人气助威条预览（假数据，不出网）。旧的全量假直播演示已废弃。
+const demoParam = new URLSearchParams(location.search).get('demo');
+
+if (demoParam !== null) {
+  void import('./demo/DemoApp').then(({ default: DemoApp }) => {
+    root.render(
+      <React.StrictMode>
+        <DemoApp state={demoParam} />
+      </React.StrictMode>
+    );
+  });
+} else {
+  root.render(
+    <React.StrictMode>
+      <App />
+      {onVercel && <Analytics />}
+      {onVercel && <SpeedInsights />}
+    </React.StrictMode>
+  );
+}
