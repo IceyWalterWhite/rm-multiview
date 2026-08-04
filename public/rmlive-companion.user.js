@@ -2,7 +2,7 @@
 // @name         RM 多视角直播助手
 // @namespace    https://rmlive.cn/
 // @version      0.1.1
-// @description  在本机浏览器中桥接 RoboMaster 官方人气投票；观看计时心跳已暂停，等待新交互设计。登录 Cookie 不离开浏览器。
+// @description  在本机浏览器中桥接 RoboMaster 官方人气投票与观看计时；登录 Cookie 不离开浏览器。
 // @author       RM Multiview
 // @match        https://rmlive.cn/*
 // @match        https://www.rmlive.cn/*
@@ -32,8 +32,6 @@
   const endpoints = Object.freeze({
     getWatchProgress: `${OFFICIAL_ORIGIN}/registration/getWatchProgress`,
     vote: `${OFFICIAL_ORIGIN}/registration/cheer/vote`,
-    // @deprecated The current page does not dispatch this action. Keep the
-    // fixed endpoint only so a future redesigned experience can be audited.
     heartbeat: `${OFFICIAL_ORIGIN}/registration/watchHeartbeat`,
   });
 
