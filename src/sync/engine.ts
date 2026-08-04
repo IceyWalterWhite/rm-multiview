@@ -58,6 +58,8 @@ export class SyncEngine {
   private byteSink: ByteSink | null = null;
   private changeListeners = new Set<() => void>();
   private statusCache = new Map<string, StreamStatus>();
+  /** 比赛是否进行中；null = 还判不出来。仅供 UI 取舍，不参与控制决策 */
+  private matchLive: boolean | null = null;
 
   register(id: string, handle: StreamHandle): () => void {
     this.streams.set(id, { handle, samples: [], adjusting: false });
@@ -113,6 +115,20 @@ export class SyncEngine {
   subscribeChange(fn: () => void): () => void {
     this.changeListeners.add(fn);
     return () => this.changeListeners.delete(fn);
+  }
+
+  /**
+   * 开赛状态（audioCalib 的探针写入）。刻意**不**参与控制决策——
+   * 赛间垫片同样要对齐，只是没必要把误差摆到观众眼前。
+   */
+  setMatchLive(v: boolean | null): void {
+    if (this.matchLive === v) return;
+    this.matchLive = v;
+    for (const fn of this.changeListeners) fn();
+  }
+
+  isMatchLive(): boolean | null {
+    return this.matchLive;
   }
 
   /** 引用稳定：状态未变时返回同一对象（1Hz tick 不得击穿 11 路 memo） */

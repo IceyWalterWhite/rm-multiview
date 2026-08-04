@@ -196,4 +196,54 @@ describe('AudioCalibrator', () => {
     new AudioCalibrator(engine3, { decode, storage, today: () => '2026-08-03' });
     expect(setDelta3).not.toHaveBeenCalled();
   });
+
+  // 开赛探针：判据是「FPV 路有没有声音」。赛间实测是数字静音（采样恒为 0），
+  // 比赛时各路共享主视角音频。主视角全程有解说，不能参与判定。
+  describe('probeLive', () => {
+    const silentSeg = (id: string, isMain: boolean, marker: number) => {
+      pcmRegistry.set(marker, new Float32Array(SR * 5)); // 全零＝数字静音
+      cal.ingest(id, { isMain, tier: '540p' }, {
+        nameSec: 1000 + marker, firstAudioPts: 0, firstVideoPts: 0,
+        adts: new Uint8Array([marker]), sampleRate: SR, frameCount: 215,
+      });
+    };
+    const soundingSeg = (id: string, isMain: boolean, marker: number) => {
+      pcmRegistry.set(marker, CONTENT.subarray(0, SR * 5));
+      cal.ingest(id, { isMain, tier: '540p' }, {
+        nameSec: 1000 + marker, firstAudioPts: 0, firstVideoPts: 0,
+        adts: new Uint8Array([marker]), sampleRate: SR, frameCount: 215,
+      });
+    };
+
+    it('reports null when there is nothing to judge', async () => {
+      expect(await cal.probeLive()).toBeNull();
+    });
+
+    it('reports false when every FPV path is digitally silent', async () => {
+      silentSeg('s1', false, 1);
+      silentSeg('s2', false, 2);
+      expect(await cal.probeLive()).toBe(false);
+    });
+
+    it('reports true as soon as any one FPV path has audio', async () => {
+      silentSeg('s1', false, 3);   // 各路出声差一个分片（现网实测 ~6s），不能要求全部出声
+      soundingSeg('s2', false, 4);
+      expect(await cal.probeLive()).toBe(true);
+    });
+
+    it('ignores the main view, which carries commentary throughout', async () => {
+      soundingSeg('main', true, 5); // 只有主视角有声 → 仍是赛间
+      silentSeg('s1', false, 6);
+      expect(await cal.probeLive()).toBe(false);
+    });
+
+    it('reports null when decoding is unavailable, so the UI holds instead of assuming idle', async () => {
+      cal.ingest('s1', { isMain: false, tier: '540p' }, {
+        nameSec: 1000, firstAudioPts: 0, firstVideoPts: 0,
+        adts: new Uint8Array([250]), // 未注册的 marker → decode 抛错
+        sampleRate: SR, frameCount: 215,
+      });
+      expect(await cal.probeLive()).toBeNull();
+    });
+  });
 });

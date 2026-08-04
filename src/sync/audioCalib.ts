@@ -53,6 +53,12 @@ const BUF_SPAN_SEC = 40; // 环形缓冲保留跨度
 const MAX_SEARCH_SEC = 8; // δ 差搜索半径（实测 ≤4.4s，留裕量）
 const STORE_KEY = 'rm.sync.viewDelta.v1';
 const CAL_INTERVAL_MS = 60_000;
+// 开赛探针：比赛时各路共享主视角音频，赛间 FPV 是**数字静音**——
+// 2026-08-04 现网实测采样值恒为 0（peak 严格 0，非低电平），出声段包络 rms ≈0.05。
+// 门限放在两者之间任何位置都行，取 1e-3 纯粹留余量（解码链路可能混入微量抖动）。
+const LIVE_RMS = 1e-3;
+// 10s：比 calibrate 的 60s 密得多。这只解最新一片、不做互相关，一片几毫秒，开销可忽略。
+const PROBE_INTERVAL_MS = 10_000;
 
 function defaultToday(): string {
   const d = new Date();
@@ -105,6 +111,7 @@ export class AudioCalibrator {
   private today: () => string;
   private streams = new Map<string, StreamBuf>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private probeTimer: ReturnType<typeof setInterval> | null = null;
   private calibrating = false;
 
   constructor(engine: SyncEngine, opts: Options) {
@@ -172,8 +179,43 @@ export class AudioCalibrator {
     }
   }
 
+  /**
+   * 开赛探针：只解各侧路最新一片、不做互相关。
+   * 返回 true=比赛进行中、false=赛间、null=没有可判的素材（无分片或解码不可用）。
+   * 判据即「FPV 路有没有声音」——比赛时各路共享主视角音频，赛间是数字静音。
+   * 用 null 而非 false 表示「不知道」：消费方据此保持原状，不会把解码失败误当成赛间。
+   */
+  async probeLive(): Promise<boolean | null> {
+    let decoded = 0;
+    let sounding = 0;
+    for (const buf of this.streams.values()) {
+      if (buf.isMain) continue; // 主视角全程有解说，拿它判必然恒真
+      const last = buf.entries.at(-1);
+      if (!last) continue;
+      if (last.pcm === undefined) {
+        try {
+          const d = await this.decode(last.adts);
+          last.pcm = downsample(d.channelData, d.sampleRate, CAL_SR);
+        } catch {
+          last.pcm = null;
+        }
+      }
+      if (!last.pcm || last.pcm.length === 0) continue;
+      decoded++;
+      let sum = 0;
+      for (const x of last.pcm) sum += x * x;
+      if (Math.sqrt(sum / last.pcm.length) > LIVE_RMS) sounding++;
+    }
+    if (decoded === 0) return null;
+    return sounding > 0; // 任一路出声即算开赛：各路出声差一个分片（实测 ~6s），取最早的那个
+  }
+
   start(intervalMs: number = CAL_INTERVAL_MS): void {
     if (!this.timer) this.timer = setInterval(() => void this.calibrate(), intervalMs);
+    if (!this.probeTimer) {
+      this.probeTimer = setInterval(() => void this.publishLive(), PROBE_INTERVAL_MS);
+      void this.publishLive(); // 首次立即探一发，别让角标白挂 10 秒
+    }
   }
 
   stop(): void {
@@ -181,6 +223,14 @@ export class AudioCalibrator {
       clearInterval(this.timer);
       this.timer = null;
     }
+    if (this.probeTimer) {
+      clearInterval(this.probeTimer);
+      this.probeTimer = null;
+    }
+  }
+
+  private async publishLive(): Promise<void> {
+    this.engine.setMatchLive(await this.probeLive());
   }
 
   /** 把一路缓冲装配成名字域连续信号（空洞按 PTS 定位、补零） */
