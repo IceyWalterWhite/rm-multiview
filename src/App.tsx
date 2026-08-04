@@ -4,8 +4,10 @@ import type { DanmakuConnection } from './net/leancloud';
 import { useProfile } from './hooks/useProfile';
 import { useCatalog } from './hooks/useCatalog';
 import { useDanmaku, makeLiveConnFactory } from './hooks/useDanmaku';
+import { useCheer } from './hooks/useCheer';
 import { DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
 import { LiveStage } from './components/LiveStage';
+import { CheerBar } from './components/CheerBar';
 import { ChatSection } from './components/ChatSection';
 import { IdentityEditor } from './components/IdentityEditor';
 import { OfflineView } from './components/OfflineView';
@@ -69,6 +71,18 @@ function Live(props: LiveProps) {
   const { catalog, connFactory, profile, setEditing } = props;
   const danmakuEnabled = connFactory !== null;
   const { messages, status, send } = useDanmaku(connFactory);
+  const cheer = useCheer(catalog);
+  const cheerSlot = cheer.visible ? (
+    <CheerBar
+      redVotes={cheer.redVotes}
+      blueVotes={cheer.blueVotes}
+      redLabel={cheer.redLabel}
+      blueLabel={cheer.blueLabel}
+      canVote={false}
+      officialUrl=""
+      error={cheer.error}
+    />
+  ) : null;
   // Live 每批弹幕都重渲染；回调引用稳定，DanmakuComposer/QualityControls 的 memo 才有效
   const onSend = useCallback((text: string) => send(text, profile), [send, profile]);
   const onEditIdentity = useCallback(() => setEditing(true), [setEditing]);
@@ -80,6 +94,7 @@ function Live(props: LiveProps) {
       )}
       <LiveStage
         catalog={catalog} messages={messages} danmakuEnabled={danmakuEnabled}
+        cheerSlot={cheerSlot}
         mainQuality={props.mainQuality} multiQuality={props.multiQuality}
         setMainQuality={props.setMainQuality} setMultiQuality={props.setMultiQuality}
         profile={profile} isComplete={props.isComplete}

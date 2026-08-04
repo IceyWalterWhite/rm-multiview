@@ -8,7 +8,6 @@ interface FakeCallbacks {
 
 class FakeBase {
   static loads: { context: unknown; callbacks: FakeCallbacks }[] = [];
-  constructor(_config: unknown) {}
   load(context: unknown, _config: unknown, callbacks: FakeCallbacks) {
     FakeBase.loads.push({ context, callbacks });
   }

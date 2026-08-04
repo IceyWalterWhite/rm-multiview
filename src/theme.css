@@ -19,6 +19,7 @@
 }
 * { box-sizing: border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font-family: system-ui, "Microsoft YaHei", sans-serif; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0, 0, 0, 0); clip-path:inset(50%); white-space:nowrap; border:0; }
 /* UA 原生控件默认 Arial 13.33px，与页面字体割裂 */
 button, input, select { font: inherit; }
 /* 键盘焦点指示：全站统一金色描边（输入框例外，由 .composer 外框接管） */
@@ -31,8 +32,13 @@ html { scroll-snap-type: y proximity; }
 
 .live-stage { height:100vh; height:100dvh; padding:10px; display:flex; flex-direction:column; gap:10px; }
 /* 侧列宽由 LiveStage 通过 --side-col-w CSS 变量动态设定： (行高 - 4×gap) / 5 × 16/9。
-   与主视角严格顶到底对齐，不受控制栏换行影响。 */
-.stage-row { position:relative; display:flex; gap:8px; flex:1; min-height:0; overflow:hidden; }
+   与主视角严格顶到底对齐，不受控制栏换行影响。
+   --enlarge-scale 是遮挡判定的唯一真相源（useEnlarged 从这里读回去算几何）。
+   同列 1/3/5 号同时放大时，相邻两个放大框的缝 = (2.5 − 1.5×scale)×机位高 + 2×gap。
+   1.6 是让这条缝在任何屏幕尺寸下都为正的上限：恒为 +0.10×机位高 + 12px。
+   别改回 1.7：那时缝是 −0.05×机位高 + 12px，机位高一过 120px（视口约 620px）就跌破判定阈值，
+   连点 1/3/5 会一路互相挤掉、只剩最后点的那一个（2026-08-04 实测 6 档视口确认）。 */
+.stage-row { position:relative; --enlarge-scale:1.6; display:flex; gap:8px; flex:1; min-height:0; overflow:hidden; }
 .side-column { position:relative; z-index:1; width:var(--side-col-w); flex:none; display:flex; flex-direction:column; gap:6px; }
 /* 机位：盒子锁 16:9（=源比例 → object-fit:cover 不裁不拉），保留圆角 */
 .view-tile { position:relative; z-index:0; width:100%; aspect-ratio:16/9; flex:0 0 auto; padding:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear .15s; }
@@ -41,7 +47,7 @@ html { scroll-snap-type: y proximity; }
 .view-tile:hover:not(.enlarged) { box-shadow:0 0 0 1px var(--line-strong); }
 /* 按下即反馈，不等抬起（Response 原则）；放大态按压幅度对应缩小 */
 .view-tile:active:not(.enlarged) { transform:scale(.96); }
-.view-tile.enlarged:active { transform:scale(1.64); }
+.view-tile.enlarged:active { transform:scale(calc(var(--enlarge-scale) - .06)); }
 /* transform-origin 固定在基础元素上（不随 .enlarged 变），保证放大/缩小双向动画都朝同一锚点，平滑无跳变 */
 .side-column.red  .view-tile { transform-origin:left center; }
 .side-column.blue .view-tile { transform-origin:right center; }
@@ -49,8 +55,10 @@ html { scroll-snap-type: y proximity; }
 .side-column.red  .view-tile:last-child  { transform-origin:left bottom; }
 .side-column.blue .view-tile:first-child { transform-origin:right top; }
 .side-column.blue .view-tile:last-child  { transform-origin:right bottom; }
-/* 放大朝中间（主视角方向）展开，不出界 */
-.view-tile.enlarged { transform:scale(1.7); z-index:20; box-shadow:0 6px 30px rgba(0,0,0,.7); transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear 0s; }
+/* 放大朝中间（主视角方向）展开，不出界。
+   --stack 是点开次序（ViewTile 写入）：多路同开时，刚点开的那一路必须压住正在让位缩回去的那一路，
+   否则收回动画的最后一刻会看到一个小方块浮在新开的大图上面。 */
+.view-tile.enlarged { transform:scale(var(--enlarge-scale)); z-index:calc(20 + var(--stack, 0)); box-shadow:0 6px 30px rgba(0,0,0,.7); transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear 0s; }
 .view-tile-video { width:100%; height:100%; object-fit:cover; display:block; }
 /* z-index:0 自建层叠上下文：标题条/静音键/弹幕层的 z 值全部关在主视角内部，
    保证侧列(z:1)的机位——含放大态与放大/缩回动画全程——永远压在主视角之上 */
@@ -282,4 +290,54 @@ html { scroll-snap-type: y proximity; }
   .send-btn, .rp-tab, .id-chip, .rp-open, .mute-btn, .dm-toggle, .sync-toggle, .sync-trim-btn { min-height:44px; }
   .rp-open { display:inline-flex; align-items:center; }
   .composer-input { font-size:1rem; }
+}
+
+/* 人气助威条：纯展示组件，数据和投票行为由接入方提供。 */
+.cheer { flex:none; position:relative; z-index:6; display:flex; flex-direction:column; gap:.3rem; padding:.4rem 0 0; background:linear-gradient(to top, rgba(10,13,18,.86) 0%, rgba(10,13,18,0) 100%); }
+.main-stage > .cheer { position:absolute; left:0; right:0; bottom:0; }
+.cheer__head { display:flex; align-items:center; padding:0 .625rem; }
+.cheer__team { display:flex; align-items:center; gap:.4rem; flex:1 1 0; min-width:0; }
+.cheer__team--blue { justify-content:flex-end; }
+.cheer__gap { flex:none; width:2.75rem; }
+.cheer__name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); font-size:clamp(.75rem, 1.3vw, .875rem); line-height:1.4; letter-spacing:.01em; }
+.cheer__votes { flex:none; font-size:clamp(.8125rem, 1.5vw, 1rem); line-height:1.25; font-weight:700; font-variant-numeric:tabular-nums; }
+.cheer__team--red .cheer__votes { color:#ff8a94; }
+.cheer__team--blue .cheer__votes { color:#8fbcff; }
+.cheer__chip { flex:none; display:inline-flex; align-items:center; justify-content:center; gap:.25rem; min-width:2.5rem; min-height:1.45rem; padding:.05rem .4rem .05rem .2rem; border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(18,22,30,.7); box-shadow:0 1px 4px rgba(0,0,0,.24); font-size:.75rem; line-height:1.45; font-weight:700; font-variant-numeric:tabular-nums; opacity:0; transform:translateY(2px) scale(.96); transition:opacity .18s ease, transform .24s cubic-bezier(.2,0,0,1); }
+.cheer__chip.is-on { opacity:1; transform:translateY(0) scale(1); }
+.cheer__chip--red { color:#ff8a94; }
+.cheer__chip--blue { color:#8fbcff; }
+.cheer__chip-icon { display:block; width:1rem; height:1rem; flex:none; object-fit:contain; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+.cheer-error { padding:0 .625rem; color:#ff8a8a; font-size:.75rem; line-height:1.45; letter-spacing:.01em; }
+.cheer__track { position:relative; display:flex; height:.375rem; background:rgba(255,255,255,.08); }
+.cheer__fill { display:block; height:100%; }
+.cheer__fill--red { background:linear-gradient(90deg, rgba(200,29,47,.75), var(--red)); }
+.cheer__fill--blue { background:linear-gradient(90deg, var(--blue), rgba(42,95,196,.75)); }
+.cheer__vs { position:absolute; bottom:0; left:50%; z-index:2; display:block; padding:9px; margin:0 0 -9px -22px; line-height:0; transform-origin:bottom center; transition:transform .3s cubic-bezier(.2,0,0,1); }
+.cheer__vs img { display:block; width:26px; height:26px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.75)); }
+.cheer__vs:hover { transform:scale(1.12); }
+.cheer__vs.is-pulse { animation:cheer-vs-pulse 500ms cubic-bezier(.2,0,0,1); }
+@keyframes cheer-vs-pulse { 0% { transform:scale(1); } 40% { transform:scale(1.16); } 100% { transform:scale(1); } }
+.cheer-vote { flex:none; cursor:pointer; border:1px solid; border-radius:999px; background:rgba(255,255,255,.06); padding:.1rem .6rem; font-size:clamp(.6875rem, 1.2vw, .8125rem); line-height:1.45; font-weight:700; letter-spacing:.02em; transition:transform 100ms ease-out, background-color 150ms ease, border-color 150ms ease; }
+.cheer-vote--red { color:#ff8a94; border-color:rgba(255,59,78,.5); }
+.cheer-vote--red:hover { background:rgba(255,59,78,.18); border-color:#ff8a94; }
+.cheer-vote--blue { color:#8fbcff; border-color:rgba(59,130,246,.5); }
+.cheer-vote--blue:hover { background:rgba(59,130,246,.2); border-color:#8fbcff; }
+.cheer-vote:active { transform:scale(.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer__fill { transition:width .2s linear; }
+  .cheer__vs { transition:none; }
+  .cheer__vs.is-pulse { animation:none; }
+  .cheer__chip { transform:none; transition:opacity .15s ease; }
+}
+
+@media (prefers-contrast: more) {
+  .cheer { background:rgba(8,10,14,.97); }
+  .cheer__track { outline:1px solid var(--line-strong); }
+  .cheer-vote { background:rgba(0,0,0,.65); border-width:2px; }
+}
+
+@media (pointer: coarse) {
+  .cheer-vote { min-height:44px; }
 }

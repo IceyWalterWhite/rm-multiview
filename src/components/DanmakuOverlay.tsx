@@ -51,6 +51,10 @@ export function DanmakuOverlay({ messages }: { messages: Danmaku[] }) {
       nextFlying.push({ key: `${dedupeKey(d)}-${seq.current}`, d, track, durationMs: flyDurationMs() });
     }
     if (!nextFlying.length) return;
+    // 有意为之：飞行队列是外部事件驱动的状态机，轨道占用/去重/序号都是随时间演进的 ref 状态，
+    // 渲染期既算不出也不能改（StrictMode 双调用会重复占轨道）。多出的那一轮渲染在同一帧内完成，
+    // 视觉无差别。要真正消除需把调度移出 React 用 useSyncExternalStore 订阅——独立重构。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlying((f) => {
       const room = MAX_CONCURRENT - f.length;
       if (room <= 0) return f;

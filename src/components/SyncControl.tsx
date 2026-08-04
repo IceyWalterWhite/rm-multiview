@@ -15,10 +15,13 @@ interface Props {
 export function SyncControl({ on, onToggle, trim, onTrim }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
+  // 同步关掉时面板一并收起。渲染期推导而非 effect+setState——
+  // 后者要多跑一轮渲染才收起，且 open 残留为 true，重新开启同步时面板会自己弹出来
+  const panelOpen = open && on;
 
   // 关闭路径：Esc（stopPropagation 避免顺带收起放大的机位）与点外
   useEffect(() => {
-    if (!open) return;
+    if (!panelOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
@@ -34,12 +37,7 @@ export function SyncControl({ on, onToggle, trim, onTrim }: Props) {
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('pointerdown', onPointer);
     };
-  }, [open]);
-
-  // 同步关掉时面板一并收起
-  useEffect(() => {
-    if (!on) setOpen(false);
-  }, [on]);
+  }, [panelOpen]);
 
   return (
     <span className="sync-pill" ref={rootRef}>
@@ -47,16 +45,16 @@ export function SyncControl({ on, onToggle, trim, onTrim }: Props) {
       {on && (
         // 画面上寸土寸金：只留箭头，可访问名由 aria-label 承担（观赛屏不铺控件带）
         <button
-          className={`sync-trim-btn${open ? ' active' : ''}`}
-          aria-expanded={open}
+          className={`sync-trim-btn${panelOpen ? ' active' : ''}`}
+          aria-expanded={panelOpen}
           aria-label="同步微调"
           onClick={() => setOpen((v) => !v)}
           title="同步微调"
         >
-          <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+          <span aria-hidden="true">{panelOpen ? '▴' : '▾'}</span>
         </button>
       )}
-      {open && (
+      {panelOpen && (
         <div className="sync-panel">
           <div className="sync-panel-row">
             <label htmlFor="sync-trim">同步微调</label>

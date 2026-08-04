@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Danmaku, MatchTitle, StreamView } from '../types';
 import type { QualityLabel } from '../config';
 import type { SyncEngine } from '../sync/engine';
@@ -8,13 +8,14 @@ import { MatchTitleBar } from './MatchTitleBar';
 import { SyncControl } from './SyncControl';
 import { sourceForQuality } from '../data/streams';
 
-export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, onSignatureExpired, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim }: {
+export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim }: {
   main: StreamView;
   quality: QualityLabel;
   titleFallback: string;
   matchTitle: MatchTitle | null;
   messages: Danmaku[];
   showDanmaku: boolean;
+  cheerSlot?: ReactNode;
   onSignatureExpired?: () => void;
   syncEngine?: SyncEngine;
   /** 时码同步开关与微调：控件悬浮在本组件右上角，与静音同处一区 */
@@ -50,6 +51,7 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
         syncTier={source?.label ?? quality}
       />
       {showDanmaku && <DanmakuOverlay messages={messages} />}
+      {cheerSlot}
     </div>
   );
 }

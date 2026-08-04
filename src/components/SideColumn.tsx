@@ -8,18 +8,19 @@ interface Props {
   side: 'red' | 'blue';
   views: StreamView[];
   quality: QualityLabel;
-  enlargedId: string | null;
+  /** 机位 id → 放大次序。两列共用一份，跨列遮挡才判得了 */
+  stacks: ReadonlyMap<string, number>;
   onToggle: (id: string) => void;
   onSignatureExpired?: () => void;
   syncEngine?: SyncEngine;
 }
 
 // memo：截断弹幕批次触发的重渲染向 5 路 ViewTile/VideoPlayer 传播
-export const SideColumn = memo(function SideColumn({ side, views, quality, enlargedId, onToggle, onSignatureExpired, syncEngine }: Props) {
+export const SideColumn = memo(function SideColumn({ side, views, quality, stacks, onToggle, onSignatureExpired, syncEngine }: Props) {
   return (
     <div className={`side-column ${side}`}>
       {views.map((v) => (
-        <ViewTile key={v.id} view={v} quality={quality} enlarged={enlargedId === v.id} onToggle={onToggle} onSignatureExpired={onSignatureExpired} syncEngine={syncEngine} />
+        <ViewTile key={v.id} view={v} quality={quality} stack={stacks.get(v.id) ?? null} onToggle={onToggle} onSignatureExpired={onSignatureExpired} syncEngine={syncEngine} />
       ))}
     </div>
   );
