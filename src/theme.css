@@ -32,8 +32,13 @@ html { scroll-snap-type: y proximity; }
 
 .live-stage { height:100vh; height:100dvh; padding:10px; display:flex; flex-direction:column; gap:10px; }
 /* 侧列宽由 LiveStage 通过 --side-col-w CSS 变量动态设定： (行高 - 4×gap) / 5 × 16/9。
-   与主视角严格顶到底对齐，不受控制栏换行影响。 */
-.stage-row { position:relative; display:flex; gap:8px; flex:1; min-height:0; overflow:hidden; }
+   与主视角严格顶到底对齐，不受控制栏换行影响。
+   --enlarge-scale 是遮挡判定的唯一真相源（useEnlarged 从这里读回去算几何）。
+   同列 1/3/5 号同时放大时，相邻两个放大框的缝 = (2.5 − 1.5×scale)×机位高 + 2×gap。
+   1.6 是让这条缝在任何屏幕尺寸下都为正的上限：恒为 +0.10×机位高 + 12px。
+   别改回 1.7：那时缝是 −0.05×机位高 + 12px，机位高一过 120px（视口约 620px）就跌破判定阈值，
+   连点 1/3/5 会一路互相挤掉、只剩最后点的那一个（2026-08-04 实测 6 档视口确认）。 */
+.stage-row { position:relative; --enlarge-scale:1.6; display:flex; gap:8px; flex:1; min-height:0; overflow:hidden; }
 .side-column { position:relative; z-index:1; width:var(--side-col-w); flex:none; display:flex; flex-direction:column; gap:6px; }
 /* 机位：盒子锁 16:9（=源比例 → object-fit:cover 不裁不拉），保留圆角 */
 .view-tile { position:relative; z-index:0; width:100%; aspect-ratio:16/9; flex:0 0 auto; padding:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear .15s; }
@@ -42,7 +47,7 @@ html { scroll-snap-type: y proximity; }
 .view-tile:hover:not(.enlarged) { box-shadow:0 0 0 1px var(--line-strong); }
 /* 按下即反馈，不等抬起（Response 原则）；放大态按压幅度对应缩小 */
 .view-tile:active:not(.enlarged) { transform:scale(.96); }
-.view-tile.enlarged:active { transform:scale(1.64); }
+.view-tile.enlarged:active { transform:scale(calc(var(--enlarge-scale) - .06)); }
 /* transform-origin 固定在基础元素上（不随 .enlarged 变），保证放大/缩小双向动画都朝同一锚点，平滑无跳变 */
 .side-column.red  .view-tile { transform-origin:left center; }
 .side-column.blue .view-tile { transform-origin:right center; }
@@ -50,8 +55,10 @@ html { scroll-snap-type: y proximity; }
 .side-column.red  .view-tile:last-child  { transform-origin:left bottom; }
 .side-column.blue .view-tile:first-child { transform-origin:right top; }
 .side-column.blue .view-tile:last-child  { transform-origin:right bottom; }
-/* 放大朝中间（主视角方向）展开，不出界 */
-.view-tile.enlarged { transform:scale(1.7); z-index:20; box-shadow:0 6px 30px rgba(0,0,0,.7); transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear 0s; }
+/* 放大朝中间（主视角方向）展开，不出界。
+   --stack 是点开次序（ViewTile 写入）：多路同开时，刚点开的那一路必须压住正在让位缩回去的那一路，
+   否则收回动画的最后一刻会看到一个小方块浮在新开的大图上面。 */
+.view-tile.enlarged { transform:scale(var(--enlarge-scale)); z-index:calc(20 + var(--stack, 0)); box-shadow:0 6px 30px rgba(0,0,0,.7); transition:transform .15s ease, box-shadow .15s ease, z-index 0s linear 0s; }
 .view-tile-video { width:100%; height:100%; object-fit:cover; display:block; }
 /* z-index:0 自建层叠上下文：标题条/静音键/弹幕层的 z 值全部关在主视角内部，
    保证侧列(z:1)的机位——含放大态与放大/缩回动画全程——永远压在主视角之上 */

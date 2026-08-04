@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
@@ -6,6 +6,7 @@ import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
 import { DanmakuComposer } from './DanmakuComposer';
 import { useMatchTitle } from '../hooks/useMatchTitle';
+import { useEnlarged } from '../hooks/useEnlarged';
 import { prefersReducedMotion } from '../a11y';
 
 interface Props {
@@ -25,29 +26,26 @@ interface Props {
 }
 
 export function LiveStage(p: Props) {
-  // 红、蓝各自独立的放大状态：两侧可同时各放大一个
-  const [enlargedRed, setEnlargedRed] = useState<string | null>(null);
-  const [enlargedBlue, setEnlargedBlue] = useState<string | null>(null);
   const [tooNarrow, setTooNarrow] = useState(false);
   const [danmakuOn, setDanmakuOn] = useState(true);
   const rowRef = useRef<HTMLDivElement>(null);
-  // useCallback：引用稳定才不会击穿 SideColumn 的 memo（弹幕批次不该重渲染 11 路机位）
-  const toggleRed = useCallback((id: string) => setEnlargedRed((cur) => (cur === id ? null : id)), []);
-  const toggleBlue = useCallback((id: string) => setEnlargedBlue((cur) => (cur === id ? null : id)), []);
+  // 多路放大：互不遮挡的机位可以同时开着，会被挤到的那一路自动缩回去。
+  // toggle/clear 引用稳定，才不会击穿 SideColumn 的 memo（弹幕批次不该重渲染 11 路机位）
+  const { stacks, toggle, clear } = useEnlarged(rowRef);
   const matchTitle = useMatchTitle(p.catalog.zoneName);
 
-  // Esc 收起放大的机位（wayfinding：任何状态都要有键盘退路）。
+  // Esc 收起全部放大的机位（wayfinding：任何状态都要有键盘退路）。
   // 对话框开着时 Esc 属于对话框（原生 cancel），不越权抢收
+  const hasEnlarged = stacks.size > 0;
   useEffect(() => {
-    if (enlargedRed === null && enlargedBlue === null) return;
+    if (!hasEnlarged) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-      setEnlargedRed(null);
-      setEnlargedBlue(null);
+      clear();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [enlargedRed, enlargedBlue]);
+  }, [hasEnlarged, clear]); // 依赖布尔而非 stacks 本身：多路开关不必反复重绑监听
 
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
   // 同时从 CSS 读取 .side-column 的真实 gap，动态设 --side-col-w 使 5 个 16:9 机位精确填满行高
@@ -80,9 +78,9 @@ export function LiveStage(p: Props) {
   return (
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
-        <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
+        <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} />
         <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} />
-        <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
+        <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
       <div className="controls">
