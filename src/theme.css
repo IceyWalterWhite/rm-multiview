@@ -271,16 +271,15 @@ html { scroll-snap-type: y proximity; }
 }
 
 /* 窄窗口控制栏渐进收纳：固定项合计 ~744px（清晰度 pill 246 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
-   时码同步已移到主视角右上角（与静音同处 .stage-tools），不再占控制栏宽度。
-   ≤960 先松开输入条最小宽（chip 高权重让位、输入框保基准），保住单行到 780px；
-   更窄则按下方 780px 断点主动堆成两行，绝不放任 flex 自行溢出。 */
-@media (max-width: 960px) {
+   ≤830 先松开输入条最小宽（chip 高权重让位、输入框保基准），保住单行到 740px；
+   更窄则按下方 740px 断点主动堆成两行，绝不放任 flex 自行溢出。 */
+@media (max-width: 830px) {
   .composer--bar { min-width:min(240px, 100%); }
 }
-/* 780px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
+/* 740px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
    第一行 清晰度药丸 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
    order 只调视觉行序，DOM/Tab 顺序不变 */
-@media (max-width: 780px) {
+@media (max-width: 740px) {
   .composer--bar { flex-basis:100%; order:1; }
   .composer--bar .id-chip { max-width:9rem; } /* 长身份让位给输入框 */
 }
