@@ -26,6 +26,7 @@ describe('App', () => {
     const { container } = render(<App />);
     expect(container.firstChild).not.toBeNull();
     expect(screen.getByText('本场直播未开启弹幕')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '人气助威' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '发送' })).not.toBeInTheDocument();
   });
 

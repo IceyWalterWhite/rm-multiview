@@ -6,9 +6,21 @@ import { useCatalog } from './hooks/useCatalog';
 import { useDanmaku, makeLiveConnFactory } from './hooks/useDanmaku';
 import { DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
 import { LiveStage } from './components/LiveStage';
+import { CheerBar } from './components/CheerBar';
 import { ChatSection } from './components/ChatSection';
 import { IdentityEditor } from './components/IdentityEditor';
 import { OfflineView } from './components/OfflineView';
+
+const VISUAL_CHEER_BAR = (
+  <CheerBar
+    redVotes={0}
+    blueVotes={0}
+    redLabel="红方"
+    blueLabel="蓝方"
+    canVote={false}
+    officialUrl=""
+  />
+);
 
 export default function App() {
   const { state, refresh } = useCatalog();
@@ -80,6 +92,7 @@ function Live(props: LiveProps) {
       )}
       <LiveStage
         catalog={catalog} messages={messages} danmakuEnabled={danmakuEnabled}
+        cheerSlot={VISUAL_CHEER_BAR}
         mainQuality={props.mainQuality} multiQuality={props.multiQuality}
         setMainQuality={props.setMainQuality} setMultiQuality={props.setMultiQuality}
         profile={profile} isComplete={props.isComplete}

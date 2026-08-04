@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
@@ -12,6 +12,7 @@ interface Props {
   catalog: ZoneCatalog;
   messages: Danmaku[];
   danmakuEnabled: boolean;
+  cheerSlot?: ReactNode;
   mainQuality: QualityLabel;
   multiQuality: QualityLabel;
   setMainQuality: (q: QualityLabel) => void;
@@ -80,7 +81,7 @@ export function LiveStage(p: Props) {
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>

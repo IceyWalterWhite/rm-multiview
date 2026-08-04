@@ -27,3 +27,19 @@ export const COLOR_COMMON = '#F5B599';  // 队员/校友=橙粉
 export const ANNIVERSARY_BADGE = 'electronicTenth';
 
 export const CHAT_BUFFER_LIMIT = 300; // 与原站一致
+
+const CHEER_ART = 'https://rm-static.djicdn.com/documents/73177';
+export const CHEER_VS_ICON = `${CHEER_ART}/360ae03bf95431784015806496447875.png`;
+export const CHEER_BUBBLES: Record<'red' | 'blue', readonly string[]> = {
+  red: [
+    `${CHEER_ART}/76b0e36affe681784015779066819968.png`,
+    `${CHEER_ART}/0a8cdce1b699d1784015771982372480.png`,
+    `${CHEER_ART}/102f5f14e32461784015789171524243.png`,
+  ],
+  blue: [
+    `${CHEER_ART}/9de4a71b732521784015749294932712.png`,
+    `${CHEER_ART}/ddf3e4516b8741784015739339995248.png`,
+    `${CHEER_ART}/603930231c22c1784015759547787918.png`,
+  ],
+};
+export const CHEER_VS_CLAMP = { min: 8, max: 92 } as const;
