@@ -4,7 +4,6 @@ import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
 import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
-import { SyncControl } from './SyncControl';
 import { DanmakuComposer } from './DanmakuComposer';
 import { useMatchTitle } from '../hooks/useMatchTitle';
 import { prefersReducedMotion } from '../a11y';
@@ -154,13 +153,12 @@ export function LiveStage(p: Props) {
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} enlargedId={enlargedRed} onToggle={toggleRed} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} enlargedId={enlargedBlue} onToggle={toggleBlue} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
       <div className="controls">
         <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
-        <SyncControl on={syncOn} onToggle={toggleSync} trim={syncTrim} onTrim={handleTrim} />
         {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
         {p.danmakuEnabled && (
           <DanmakuComposer

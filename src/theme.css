@@ -71,7 +71,8 @@ html { scroll-snap-type: y proximity; }
 @keyframes retry-in { to { opacity:1; } }
 /* 48px ≈ 右上静音图标按钮宽度 + right:8px + 余量，避免声音状态切换改变标题可视宽度。
    毛玻璃材质：视频上的浮层 chrome（面积小，合成代价可控） */
-.match-title { position:absolute; top:6px; left:8px; z-index:5; max-width:calc(100% - 48px); overflow:hidden; white-space:nowrap; box-sizing:border-box; font-size:.75rem; color:var(--accent); background:rgba(8,10,14,.55); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); padding:1px 8px; border-radius:4px; }
+/* 右侧留白要容下 .stage-tools（时码同步 pill ~87 + gap 6 + 静音 ~30 + 页边 8 + 间隙 8） */
+.match-title { position:absolute; top:6px; left:8px; z-index:5; max-width:calc(100% - 152px); overflow:hidden; white-space:nowrap; box-sizing:border-box; font-size:.75rem; color:var(--accent); background:rgba(8,10,14,.55); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); padding:1px 8px; border-radius:4px; }
 /* 循环滚动场次标题：两份文本拼接，移动 -50% 无缝回到起点；悬停暂停（与弹幕行为一致） */
 .match-title__text { display:inline-block; }
 .match-title__scroll { display:inline-flex; width:max-content; animation-name: match-title-marquee; animation-timing-function:linear; animation-iteration-count:infinite; will-change:transform; }
@@ -89,18 +90,24 @@ html { scroll-snap-type: y proximity; }
 .dm-toggle:active { transform:translateY(1px); }
 .dm-toggle.active { color:var(--accent); font-weight:700; }
 
+/* 画面右上角工具区：时码同步 + 静音。都是「对这一路画面本身」的操作，聚在一处；
+   容器负责定位与间距，成员只管自己的形状——静音因此不再各自 absolute */
+.stage-tools { position:absolute; top:6px; right:8px; z-index:6; display:flex; align-items:flex-start; gap:6px; }
+
 /* 时码同步：开关沿用 dm-toggle 的激活语法（同样的事长同样的样，可预测）；
-   微调是二级披露，面板锚定触发器、从它长出来（transform-origin 右下 = 面板贴着按钮的角） */
-.sync-pill { position:relative; display:inline-flex; align-items:center; padding:0; white-space:nowrap; }
-.sync-toggle { background:transparent; border:none; color:var(--text-secondary); font-size:.8125rem; padding:4px 9px; cursor:pointer; border-radius:6px 0 0 6px; }
+   悬浮在画面上，材质与 .mute-btn 同族（同一层玻璃、同样的描边与圆角）。
+   微调是二级披露，面板锚定触发器向下生长（transform-origin 右上 = 面板贴着按钮的角） */
+.sync-pill { position:relative; display:inline-flex; align-items:center; padding:0; white-space:nowrap; background:rgba(8,10,14,.5); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); border:1px solid var(--line); border-radius:5px; }
+.sync-pill:hover { border-color:var(--accent); }
+.sync-toggle { background:transparent; border:none; color:var(--text-secondary); font-size:.75rem; padding:2px 7px; cursor:pointer; border-radius:4px 0 0 4px; line-height:1.35; }
 .sync-toggle:hover { color:var(--ink); }
 .sync-toggle:active { transform:translateY(1px); }
 .sync-toggle.active { color:var(--accent); font-weight:700; }
-.sync-trim-btn { background:transparent; border:none; border-left:1px solid var(--line); color:var(--text-secondary); font-size:.75rem; padding:4px 8px; cursor:pointer; border-radius:0 6px 6px 0; }
+.sync-trim-btn { background:transparent; border:none; border-left:1px solid var(--line); color:var(--text-secondary); font-size:.75rem; padding:2px 6px; cursor:pointer; border-radius:0 4px 4px 0; line-height:1.35; }
 .sync-trim-btn:hover, .sync-trim-btn.active { color:var(--ink); }
 .sync-trim-btn:active { transform:translateY(1px); }
-.sync-panel { position:absolute; bottom:calc(100% + 8px); right:0; z-index:30; width:216px; box-sizing:border-box; padding:10px 12px; background:rgba(16,19,24,.92); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); border:1px solid var(--line-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.5); transform-origin:bottom right; animation:sync-panel-in .16s cubic-bezier(.2,0,0,1); }
-@keyframes sync-panel-in { from { opacity:0; transform:scale(.96) translateY(4px); } }
+.sync-panel { position:absolute; top:calc(100% + 8px); right:0; z-index:30; width:216px; box-sizing:border-box; padding:10px 12px; background:rgba(16,19,24,.92); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); border:1px solid var(--line-strong); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.5); transform-origin:top right; animation:sync-panel-in .16s cubic-bezier(.2,0,0,1); }
+@keyframes sync-panel-in { from { opacity:0; transform:scale(.96) translateY(-4px); } }
 .sync-panel-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.75rem; color:var(--text-secondary); }
 .sync-panel label { color:var(--ink); font-weight:700; }
 .sync-trim-value { color:var(--accent); font-variant-numeric:tabular-nums; }
@@ -225,7 +232,8 @@ html { scroll-snap-type: y proximity; }
 .composer-error { color:#ff8a8a; font-size:.75rem; margin-left:6px; }
 .id-hint { color:var(--text-secondary); font-size:.75rem; }
 /* 静音键只占图标宽度，不挤占标题空间；与场次标题同一层毛玻璃材质 */
-.mute-btn { position:absolute; top:6px; right:8px; z-index:6; font-size:1rem; background:rgba(8,10,14,.5); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); color:var(--accent); border:1px solid var(--line); border-radius:5px; padding:2px 6px; cursor:pointer; line-height:1; }
+/* 定位交给 .stage-tools（与时码同步同处一区），这里只管自己的形状 */
+.mute-btn { font-size:1rem; background:rgba(8,10,14,.5); -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%); color:var(--accent); border:1px solid var(--line); border-radius:5px; padding:2px 6px; cursor:pointer; line-height:1; }
 .mute-btn:hover { border-color:var(--accent); }
 .mute-btn:active { transform:translateY(1px); }
 
@@ -246,7 +254,7 @@ html { scroll-snap-type: y proximity; }
 
 /* 低透明度偏好：毛玻璃回退为近实色（保对比、去 blur） */
 @media (prefers-reduced-transparency: reduce) {
-  .match-title, .mute-btn { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
+  .match-title, .mute-btn, .sync-pill { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
   .conn-status { -webkit-backdrop-filter:none; backdrop-filter:none; background:#3a2a00; }
   .new-msg-pill { -webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface-2); }
   .id-editor-dialog::backdrop { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.7); }
@@ -254,14 +262,15 @@ html { scroll-snap-type: y proximity; }
   .sync-badge { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
 }
 
-/* 窄窗口控制栏渐进收纳：固定项合计 ~874px（清晰度 pill 246 + 时码同步 pill ~130 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
+/* 窄窗口控制栏渐进收纳：固定项合计 ~744px（清晰度 pill 246 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
+   时码同步已移到主视角右上角（与静音同处 .stage-tools），不再占控制栏宽度。
    ≤960 先松开输入条最小宽（chip 高权重让位、输入框保基准），保住单行到 780px；
    更窄则按下方 780px 断点主动堆成两行，绝不放任 flex 自行溢出。 */
 @media (max-width: 960px) {
   .composer--bar { min-width:min(240px, 100%); }
 }
 /* 780px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
-   第一行 清晰度药丸 + 时码同步 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
+   第一行 清晰度药丸 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
    order 只调视觉行序，DOM/Tab 顺序不变 */
 @media (max-width: 780px) {
   .composer--bar { flex-basis:100%; order:1; }
