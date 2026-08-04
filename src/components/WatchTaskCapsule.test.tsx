@@ -49,6 +49,12 @@ describe('WatchTaskCapsule', () => {
     expect(screen.queryByRole('link', { name: /登录领弹丸/ })).not.toBeInTheDocument();
   });
 
+  it('keeps an installation entry visible for a logged-in viewer when the bridge is missing', () => {
+    render(<WatchTaskCapsule {...base} bridgeStatus="missing" />);
+    expect(screen.getByRole('link', { name: /\u4e00\u952e\u5b89\u88c5\u76f4\u64ad\u52a9\u624b/ })).toHaveAttribute('href', base.installUrl);
+    expect(screen.getByRole('button')).toHaveTextContent('15');
+  });
+
   it('shows the earned pellets and accumulated time on the capsule', () => {
     render(<WatchTaskCapsule {...base} />);
     const capsule = screen.getByRole('button');

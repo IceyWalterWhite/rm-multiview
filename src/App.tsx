@@ -7,7 +7,7 @@ import { useDanmaku, makeLiveConnFactory } from './hooks/useDanmaku';
 import { useCheer } from './hooks/useCheer';
 import { useWatchTask } from './hooks/useWatchTask';
 import { useOfficialBridge } from './hooks/useOfficialBridge';
-import { COMPANION_SCRIPT_URL, DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
+import { companionScriptUrlFor, DEFAULT_MAIN_QUALITY, DEFAULT_MULTI_QUALITY, type QualityLabel } from './config';
 import { CheerBar } from './components/CheerBar';
 import { LiveStage } from './components/LiveStage';
 import { WatchTaskCapsule } from './components/WatchTaskCapsule';
@@ -103,7 +103,7 @@ function Live(props: LiveProps) {
       tiers={watchTask.tiers}
       officialUrl={watchTask.officialUrl}
       loginUrl={watchTask.loginUrl}
-      installUrl={COMPANION_SCRIPT_URL}
+      installUrl={companionScriptUrlFor(window.location.hostname)}
       bridgeStatus={watchTask.bridgeStatus}
       heartbeatStatus={watchTask.heartbeatStatus}
       heartbeatError={watchTask.heartbeatError}

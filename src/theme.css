@@ -128,10 +128,11 @@ html { scroll-snap-type: y proximity; }
 .scroll-hint:active { transform:translateY(1px); }
 
 /* 官方观看任务：状态由 userscript 桥接，页面只负责展示和显式安装/登录入口。 */
-.watch-wrap { position:relative; display:inline-flex; }
+.watch-wrap { position:relative; display:inline-flex; gap:.35rem; }
 .watch-capsule { display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap; cursor:pointer; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:.2rem .6rem; font-size:.8125rem; line-height:1.45; letter-spacing:.01em; text-decoration:none; transition:transform 100ms ease-out, border-color 150ms ease; }
 .watch-capsule:hover { border-color:var(--accent); }
 .watch-capsule:active { transform:scale(.97); }
+.watch-capsule--install { color:var(--accent); }
 .watch-capsule__count, .watch-tier__gain { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
 .watch-capsule__unit, .watch-capsule__time, .watch-capsule__sep { color:var(--text-secondary); }
 .pellet-dot { width:.55rem; height:.55rem; flex:none; border-radius:50%; background:radial-gradient(circle at 32% 30%, #fff2c2, #d9a521 72%); box-shadow:0 0 5px rgba(255,213,74,.4); }

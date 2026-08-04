@@ -54,6 +54,14 @@ export const RM_LOGIN_OAUTH_URL = 'https://www.robomaster.com/api/members/oauth'
 /** 官方直播页：脚本缺失、未登录或功能关闭时的可信降级入口。 */
 export const RM_OFFICIAL_LIVE_URL = 'https://www.robomaster.com/live';
 export const COMPANION_SCRIPT_URL = '/rmlive-companion.user.js';
+const EDGEONE_PREVIEW_HOST = /^rm-multiview-[a-z0-9]+\.edgeone\.cool$/;
+
+/** Preview deployments use a userscript whose @match is limited to their temporary EdgeOne host. */
+export function companionScriptUrlFor(hostname: string): string {
+  return EDGEONE_PREVIEW_HOST.test(hostname)
+    ? '/rmlive-companion.preview.user.js'
+    : COMPANION_SCRIPT_URL;
+}
 
 // 官方助威美术资源，直接引用其 CDN。
 // 依赖 index.html 的 <meta name="referrer" content="no-referrer">：rm-static 按 Referer 白名单

@@ -98,6 +98,11 @@ export function WatchTaskCapsule({
         <span className="watch-capsule__sep" aria-hidden="true">·</span>
         <span className="watch-capsule__time">{formatWatchDuration(accumulatedSeconds, true)}</span>
       </button>
+      {bridgeStatus === 'missing' && !open && (
+        <a className="watch-capsule watch-capsule--install" href={installUrl} target="_blank" rel="noopener noreferrer">
+          一键安装直播助手
+        </a>
+      )}
 
       <dialog
         ref={dlgRef}
