@@ -6,13 +6,12 @@ import type { SandboxSnapshot } from '../sandbox/fleet';
 import type { SandboxScene } from '../sandbox/render/scene';
 
 /**
- * 3D 沙盘。
+ * 3D 沙盘。只存在于 grid 布局的右下区，wings（默认布局）下完全不渲染。
  *
- * 位置在第二屏（社区工具区），不在观赛屏上 —— 观赛屏不放平铺控件带。
- *
- * **只在滚进视口后才开工。** 场地模型 7.6 MiB，加上十路取像素与检测，
- * 对没打算看沙盘的观众是纯粹的浪费。three.js 与场景代码也是这时才动态 import，
- * 不进首屏包（首屏包目前 219 KB，three 一个人就有它三倍大）。
+ * **只在进入视口后才开工。** 场地模型 7.6 MiB，加上十路取像素与检测，
+ * 对没切到 grid 的观众是纯粹的浪费。three.js 与场景代码也是这时才动态 import，
+ * 不进首屏包（three 一个人就有首屏包三倍大）。于是「切到 grid 才下 7.6 MiB」
+ * 这条由组件自身保证，不依赖调用方记得做懒加载。
  */
 
 interface Props {

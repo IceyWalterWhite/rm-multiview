@@ -366,10 +366,8 @@ html { scroll-snap-type: y proximity; }
   .cheer-vote { min-height:44px; }
 }
 
-/* ---- 实时沙盘（第二屏） ---- */
-/* 与观赛屏/社区屏同为整屏，共用同一套 scroll-snap 节奏 */
-.sandbox-section { scroll-snap-align:start; position:relative; height:100vh; height:100dvh; padding:10px; display:flex; flex-direction:column; gap:6px; }
-.sandbox-section .scroll-hint { align-self:flex-end; margin-left:0; }
+/* ---- 实时沙盘 ---- */
+/* 容器尺寸由用它的布局决定（grid 布局的右下区），这里只负责沙盘本体铺满容器 */
 .sandbox { position:relative; flex:1; min-height:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#101318; }
 /* 画布尺寸由 ResizeObserver 按容器实际盒子设，CSS 只负责铺满 */
 .sandbox-canvas { display:block; width:100%; height:100%; }
