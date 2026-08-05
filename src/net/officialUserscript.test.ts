@@ -24,7 +24,7 @@ function request<A extends BridgeRequest['action']>(id: string, action: A, paylo
   } as BridgeRequest;
 }
 
-function harness() {
+function harness({ sandboxed = false }: { sandboxed?: boolean } = {}) {
   const posted: Array<{ message: BridgeResponse; origin: string }> = [];
   let listener: ((event: MessageEvent) => void) | null = null;
   const page = {
@@ -42,8 +42,13 @@ function harness() {
       responseText: '',
     };
   });
+  // Tampermonkey 只要脚本带了 @grant 就把它放进沙箱：此时脚本拿到的 `window` 是页面 window
+  // 的 Proxy，而浏览器填进 event.source 的是**原始** window，两者 !== 。sandboxed 模式复现这一点。
+  // 不复现的话，window === unsafeWindow，`event.source !== window` 天然成立，
+  // 这个曾把整条消息通道焊死的缺陷就永远测不出来。
+  const scriptWindow = sandboxed ? new Proxy(page, {}) : page;
   const context = vm.createContext({
-    window: page,
+    window: scriptWindow,
     unsafeWindow: page,
     GM: {
       info: { script: { version: '0.1.1' }, scriptHandler: 'Tampermonkey' },
@@ -72,7 +77,7 @@ function harness() {
     await vi.waitFor(() => expect(posted.some((item) => item.message.id === id)).toBe(true));
     return posted.find((item) => item.message.id === id)!.message;
   };
-  return { page, xhr, posted, send, responseFor };
+  return { page, scriptWindow, xhr, posted, send, responseFor };
 }
 
 describe('rmlive companion userscript', () => {
@@ -97,6 +102,29 @@ describe('rmlive companion userscript', () => {
     });
     expect(h.xhr).not.toHaveBeenCalled();
     expect(h.posted[0].origin).toBe(ORIGIN);
+  });
+
+  // 2026-08-05 EdgeOne 预览环境实测：脚本在跑、消息也到得了，却一律不应答。
+  // 根因是守卫写成了 `event.source !== window`，而 Tampermonkey 沙箱里 window 是 Proxy、
+  // event.source 是原始 window，该条件恒真 —— 通道被自己的安全检查焊死。
+  it('still answers when Tampermonkey sandboxes window (event.source is the raw window)', async () => {
+    const h = harness({ sandboxed: true });
+    // 前置断言：不这样，这个用例会悄悄退化成普通用例，测不到沙箱。
+    expect(h.scriptWindow).not.toBe(h.page);
+
+    h.send(request('probe-sandboxed', 'probe', {}), ORIGIN, h.page);
+    expect(await h.responseFor('probe-sandboxed')).toMatchObject({
+      ok: true,
+      data: { scriptVersion: '0.1.1', manager: 'Tampermonkey' },
+    });
+  });
+
+  // 放行沙箱不等于放行别人：跨窗口来的消息必须照旧丢弃。
+  it('still drops messages that come from a different window', async () => {
+    const h = harness({ sandboxed: true });
+    h.send(request('foreign-1', 'probe', {}), ORIGIN, { imposter: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(h.posted.some((item) => item.message.id === 'foreign-1')).toBe(false);
   });
 
   it('sends a fixed JSON vote request with the official first-party cookie partition', async () => {

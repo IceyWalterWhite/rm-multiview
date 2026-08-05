@@ -35,6 +35,25 @@
     heartbeat: `${OFFICIAL_ORIGIN}/registration/watchHeartbeat`,
   });
 
+  /**
+   * 消息是否来自本窗口自己（而非 iframe / opener / 其它窗口）。
+   *
+   * ⚠ 不能直接写 `event.source === window`：只要脚本带了任何 @grant，Tampermonkey 就在沙箱里
+   * 运行它，此时 `window` 是页面 window 的 **Proxy**，而 `event.source` 是浏览器填入的**原始**
+   * window 对象，`Proxy(target) !== target` —— 该判断在沙箱下恒为假，整条消息通道会被自己的
+   * 安全检查焊死（2026-08-05 在 EdgeOne 预览环境实测：脚本在跑、消息到得了、就是不应答）。
+   * jsdom 里没有沙箱，window === window，所以 mock 测试发现不了。
+   * unsafeWindow 是 Tampermonkey always-available 的原始窗口引用，用它兜住沙箱那一侧。
+   */
+  function isSelfWindow(source) {
+    if (source === page) return true;
+    try {
+      return typeof unsafeWindow !== 'undefined' && source === unsafeWindow;
+    } catch {
+      return false;
+    }
+  }
+
   function isObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
@@ -178,7 +197,7 @@
   page.addEventListener('message', async (event) => {
     const message = event.data;
     if (
-      event.source !== page
+      !isSelfWindow(event.source)
       || event.origin !== page.location.origin
       || !ALLOWED_ORIGINS.has(event.origin)
       || !isObject(message)
