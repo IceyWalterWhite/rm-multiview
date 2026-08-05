@@ -1,0 +1,334 @@
+{
+  "_comment": "留出评估集：这些时刻**不在** fixtures.spec.json 里，字形样本也没用过它们，所以本集上的正确率才是真实泛化精度。血量由人工从放大接触表逐帧读出；hp=null 表示画面上根本没有可读血条。像素不提交，用 dump_fixtures.py --spec 本文件 现场生成。",
+  "source": "C:\\Users\\bsb\\Downloads\\[RM26复活赛]第30场广东工业大学VS应急管理大学监控室老大爷视角",
+  "rois": [
+    "minimap",
+    "hpBar",
+    "hpText",
+    "topScoreboard",
+    "redOutpostHp",
+    "redBaseHp",
+    "blueBaseHp",
+    "blueOutpostHp"
+  ],
+  "frames": [
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 470,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 590,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 830,
+      "hp": [
+        146,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1310,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1530,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1700,
+      "hp": [
+        209,
+        220
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 610,
+      "hp": [
+        250,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1450,
+      "hp": [
+        250,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2110,
+      "hp": [
+        250,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 860,
+      "hp": null,
+      "alive": false,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1420,
+      "hp": [
+        273,
+        275
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2250,
+      "hp": [
+        252,
+        275
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 510,
+      "hp": [
+        230,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1390,
+      "hp": [
+        300,
+        300
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2270,
+      "hp": [
+        179,
+        325
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 850,
+      "hp": [
+        0,
+        200
+      ],
+      "alive": false,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1370,
+      "hp": [
+        220,
+        220
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2050,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 720,
+      "hp": [
+        241,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1600,
+      "hp": [
+        162,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2350,
+      "hp": [
+        244,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 630,
+      "hp": [
+        199,
+        300
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1290,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2130,
+      "hp": [
+        225,
+        225
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1520,
+      "hp": [
+        190,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2000,
+      "hp": null,
+      "alive": false,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2440,
+      "hp": [
+        378,
+        400
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "note": "留出集，人工读值"
+    }
+  ]
+}

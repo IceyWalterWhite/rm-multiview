@@ -1,0 +1,483 @@
+{
+  "_comment": "沙盘模块的真实像素夹具清单。hp 是人工从放大画面读出的；expectMarker 是「本帧应当检出自机标记」，已用标注图 (tools/sandbox/annotate.py) 逐帧肉眼核对过。heading 不在这里标——没有现成真值，靠标注图确认方向无误后再把算出的值冻结为回归基线。 expectMarker=null 表示该帧只作血量样本、不带小地图 ROI，标记检测不对它断言。",
+  "source": "C:\\Users\\bsb\\Downloads\\[RM26复活赛]第30场广东工业大学VS应急管理大学监控室老大爷视角",
+  "rois": [
+    "minimap",
+    "hpBar",
+    "hpText",
+    "topScoreboard",
+    "redOutpostHp",
+    "redBaseHp",
+    "blueBaseHp",
+    "blueOutpostHp"
+  ],
+  "frames": [
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1400,
+      "hp": [
+        198,
+        200
+      ],
+      "alive": true,
+      "expectMarker": true,
+      "note": "标记与一簇蓝方图标重叠，掩码碎成两块——退化案例"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1620,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": true,
+      "note": "满血"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2200,
+      "hp": [
+        20,
+        200
+      ],
+      "alive": true,
+      "expectMarker": true,
+      "note": "濒死但存活——血条近空、地图叠红色伤害泛光，记分板仍有色"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 690,
+      "hp": null,
+      "alive": false,
+      "expectMarker": false,
+      "note": "阵亡：全 UI 灰度化、血条整个消失、中央为复活倒计时对话框"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 300,
+      "hp": null,
+      "alive": false,
+      "expectMarker": false,
+      "note": "等待卡（未开赛）"
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1400,
+      "hp": [
+        250,
+        250
+      ],
+      "alive": true,
+      "expectMarker": false,
+      "note": "操作手全场关闭小地图（实测 54/54 采样点 0 命中）——有血量无位置"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1660,
+      "hp": [
+        40,
+        400
+      ],
+      "alive": true,
+      "expectMarker": false,
+      "note": "已知边界：40/400 的红色伤害泛光把标记 S/V 压到阈值下，检不出。放宽阈值会让歧义率涨十几倍，不值得——见 layout.ts 的对比表"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1400,
+      "hp": [
+        275,
+        275
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1400,
+      "hp": [
+        300,
+        300
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1400,
+      "hp": [
+        220,
+        220
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1560,
+      "hp": [
+        260,
+        260
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 600,
+      "hp": [
+        249,
+        250
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1420,
+      "hp": [
+        275,
+        275
+      ],
+      "alive": true,
+      "expectMarker": true,
+      "note": "箭头朝正上；同屏有黄绿色能量机关星形，是最容易误收的干扰"
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1500,
+      "hp": [
+        278,
+        300
+      ],
+      "alive": true,
+      "expectMarker": true,
+      "note": "当前值与上限都是三位且不相等"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2100,
+      "hp": [
+        150,
+        200
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1400,
+      "hp": [
+        192,
+        200
+      ],
+      "alive": true,
+      "expectMarker": true
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 520,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 640,
+      "hp": [
+        190,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 780,
+      "hp": [
+        167,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1340,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1480,
+      "hp": [
+        198,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2060,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 540,
+      "hp": [
+        21,
+        225
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 700,
+      "hp": [
+        250,
+        250
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1360,
+      "hp": [
+        167,
+        275
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2080,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 500,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 660,
+      "hp": [
+        197,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1300,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2160,
+      "hp": [
+        200,
+        200
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 820,
+      "hp": [
+        350,
+        350
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1660,
+      "hp": [
+        270,
+        300
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2200,
+      "hp": [
+        253,
+        275
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2420,
+      "hp": [
+        399,
+        400
+      ],
+      "alive": true,
+      "expectMarker": null,
+      "rois": [
+        "hpBar",
+        "hpText"
+      ],
+      "note": "字形样本：人工从放大接触表读值，仅供模板与血量回归，不参与标记检测断言"
+    }
+  ]
+}

@@ -1,0 +1,1804 @@
+{
+  "_comment": "目标血量（双方基地/前哨站）的字形训练集。这四个数字是全局的，同一时刻八路画面看到的完全相同——所以读一次真值能收获八路样本。真值由人工从 10 倍放大的接触表逐帧读出。像素不提交，用 dump_fixtures.py --spec 本文件 现场生成。 部分帧只标了基地（前哨站留 null）——没核对的字段宁可留空也不猜。",
+  "source": "C:\\Users\\bsb\\Downloads\\[RM26复活赛]第30场广东工业大学VS应急管理大学监控室老大爷视角",
+  "rois": [
+    "redOutpostHp",
+    "redBaseHp",
+    "blueBaseHp",
+    "blueOutpostHp"
+  ],
+  "frames": [
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1400
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 560,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 700,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 5000,
+        "blueBase": 4950,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1300,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1450,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1650,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4250,
+        "blueBase": 4245,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2050,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 1500,
+        "redBase": 5000,
+        "blueBase": 5000,
+        "blueOutpost": 1500
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2250,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 4950,
+        "blueBase": 5000,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2400,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": 0,
+        "redBase": 2829,
+        "blueBase": 4746,
+        "blueOutpost": 0
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1690,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3770,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 1710,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3470,
+        "blueBase": 3945,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2340,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 4090,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2370,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3970,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2390,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 3197,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2420,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 2176,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B1Hero",
+      "side": "blue",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B2SuqqreProject",
+      "side": "blue",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B3Infantry",
+      "side": "blue",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "B4Infantry",
+      "side": "blue",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R1Hero",
+      "side": "red",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R2SuqqreProject",
+      "side": "red",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R3Infantry",
+      "side": "red",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    },
+    {
+      "stream": "R4Infantry",
+      "side": "red",
+      "t": 2440,
+      "hp": null,
+      "alive": true,
+      "expectMarker": null,
+      "objectives": {
+        "redOutpost": null,
+        "redBase": 1861,
+        "blueBase": 4746,
+        "blueOutpost": null
+      }
+    }
+  ]
+}

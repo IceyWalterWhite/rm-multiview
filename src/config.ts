@@ -90,3 +90,18 @@ export const CHEER_VS_CLAMP = { min: 8, max: 92 } as const;
 export const CHEER_INFO_POLL_MS = 5_000;   // 拉双方票数
 export const CHEER_TARGET_POLL_MS = 10_000; // 拉当前场次，与 useMatchTitle 同频
 export const WATCH_PROGRESS_REFRESH_MIN_MS = 30000;
+
+/**
+ * 沙盘采样周期（ms）。
+ *
+ * 一轮要做的事：十路各一次 drawImage + 四次 getImageData，再跑一遍检测。
+ * 取像素部分实测十路 36.7 ms（策略 A：整帧画一次 + 逐 ROI 读回；
+ * 逐 ROI 各画各读要 171 ms）。3 Hz 下这部分约占单核 11%。
+ *
+ * 不做更快：机器人最快约 3 m/s，3 Hz 之间跑不到 1 米，渲染侧的临界阻尼弹簧
+ * 足以补平；而每快一档，代价是全场十路的解码-读回同步点也多一档。
+ */
+export const SANDBOX_TICK_MS = 333;
+
+/** 场地模型。7.6 MiB，只在用户滚到沙盘时才加载。 */
+export const SANDBOX_FIELD_GLB = '/sandbox/field.meshopt.glb';

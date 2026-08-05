@@ -12,6 +12,7 @@ import { CheerBar } from './components/CheerBar';
 import { LiveStage } from './components/LiveStage';
 import { WatchTaskCapsule } from './components/WatchTaskCapsule';
 import { ChatSection } from './components/ChatSection';
+import { SandboxSection } from './components/SandboxSection';
 import { IdentityEditor } from './components/IdentityEditor';
 import { OfflineView } from './components/OfflineView';
 
@@ -129,6 +130,7 @@ function Live(props: LiveProps) {
         onMainPlayingChange={setMainPlaying}
         onSignatureExpired={props.onSignatureExpired}
       />
+      <SandboxSection catalog={catalog} />
       <ChatSection
         zoneName={catalog.zoneName} messages={messages} danmakuEnabled={danmakuEnabled}
         profile={profile} isComplete={props.isComplete}

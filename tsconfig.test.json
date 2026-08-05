@@ -1,13 +1,15 @@
 {
+  /* 测试代码跑在 Node（vitest），应用代码跑在浏览器。两者的环境类型不同：
+     沙盘的像素夹具要 node:fs / node:zlib 读磁盘，而这些在应用里必须仍是不可用的 ——
+     所以不是把 "node" 灌进 tsconfig.app.json，而是给测试单开一个编译目标。 */
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "types": ["vite/client", "@testing-library/jest-dom", "node"],
     "skipLibCheck": true,
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -16,15 +18,11 @@
     "jsx": "react-jsx",
     "resolveJsonModule": true,
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
-  /* 测试与像素夹具走 tsconfig.test.json（那边才有 node 类型）。
-     排除掉它们，应用编译目标就不会意外放行 fs / process 这类只在 Node 存在的东西。 */
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__fixtures__/**/*.ts"]
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__fixtures__/**/*.ts", "vitest.setup.ts"]
 }

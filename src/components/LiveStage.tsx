@@ -141,9 +141,9 @@ export function LiveStage(p: Props) {
     return () => ro.disconnect();
   }, []);
 
-  const scrollToCommunity = (e: MouseEvent) => {
+  const scrollToSandbox = (e: MouseEvent) => {
     e.preventDefault();
-    document.getElementById('community')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    document.getElementById('sandbox')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
   return (
@@ -167,8 +167,9 @@ export function LiveStage(p: Props) {
             leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
           />
         )}
-        {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
-        <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
+        {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容。
+            沙盘插进来之后指向沙盘 —— 路标必须指向紧邻的下一屏，跨屏跳会让中间那屏永远没人发现 */}
+        <a className="scroll-hint" href="#sandbox" onClick={scrollToSandbox}>下滑查看实时沙盘👇</a>
       </div>
     </section>
   );
