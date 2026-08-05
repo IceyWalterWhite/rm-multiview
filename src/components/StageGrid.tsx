@@ -220,6 +220,10 @@ export function StageGrid({
   }, [selected, onSelect]);
 
   const byId = new Map(views.map((v) => [v.id, v]));
+  // 末行不满时的居中偏移（十路除不尽列数时必然发生）
+  const lastRowCount = order.length % plan.cols;
+  const firstOfLastRow = lastRowCount > 0 ? order.length - lastRowCount : -1;
+  const lastRowOffset = lastRowCount > 0 ? Math.floor((plan.cols - lastRowCount) / 2) : 0;
 
   const lowerStyle: CSSProperties = dragFrac !== null
     ? {
@@ -257,10 +261,14 @@ export function StageGrid({
           className="sg-tiles"
           ref={tilesRef}
           style={{
-            height: areaH,
+            flex: `0 0 ${areaH}px`,
             gridTemplateColumns: `repeat(${plan.cols}, ${plan.tw}px)`,
             gridAutoRows: `${plan.th}px`,
-            transition: axisEase ? `height ${axisEase}` : 'none',
+            // 拖竖条时区高与格子轨道走同一条缓动，整组机位一起长大/缩小；
+            // 横条跟手与吸附一律无过渡（那两者自己管动画）
+            transition: axisEase
+              ? `flex-basis ${axisEase}, grid-template-columns ${axisEase}, grid-auto-rows ${axisEase}`
+              : 'none',
           }}
         >
           {order.map((id, index) => {
@@ -269,11 +277,17 @@ export function StageGrid({
             const dragging = drag?.id === id && drag.moved;
             const source = sourceForQuality(v, quality);
             let style: CSSProperties | undefined;
+            // 十路除不尽列数时末行不满（3 列就是 3+3+3+1）。把末行整体居中，
+            // 否则那一两格会孤零零贴在左边——justify-content 管不到行内的空缺。
+            if (index === firstOfLastRow && lastRowOffset > 0) {
+              style = { gridColumnStart: lastRowOffset + 1 };
+            }
             if (dragging && drag) {
               // 1:1 跟手且尊重抓取偏移。格子留在网格流里占位（让位动画才有参照），
               // 只用 transform 视觉上跟到指针 —— 落位差值按几何算，不在渲染期读 DOM。
               const home = tileHome(index, plan);
               style = {
+                ...style,
                 transform: `translate(${drag.x - drag.grabX - drag.originX - home.x}px, ${drag.y - drag.grabY - drag.originY - home.y}px)`,
                 transition: 'none',
               };

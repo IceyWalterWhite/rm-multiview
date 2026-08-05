@@ -79,6 +79,43 @@ describe('solve', () => {
     }
   });
 
+  it('放得下两列时，绝不解出「一格吃掉大半宽度」的退化排布', () => {
+    // 少了宽度上限，某些高度会解出单列：两个巨格子占满机位区、其余八路全被盖住。
+    // 654×880 下 topFrac=0.75 实测踩过这个坑（cols=1 / 可见 2 路）。
+    for (const W of [480, 600, 654, 820, 1100]) {
+      for (const H of HEIGHTS) {
+        for (let frac = 0.1; frac <= 0.94; frac += 0.02) {
+          const p = solve(W, H, H * frac);
+          if (W >= Math.max(120, W * 0.22) * 2 + GRID_GAP) {
+            expect(p.tw).toBeLessThanOrEqual(W * 0.55 + 1e-6);
+            expect(p.cols).toBeGreaterThan(1);
+          }
+        }
+      }
+    }
+  });
+
+  it('可见路数不随期望高度剧烈倒退', () => {
+    // 机位区拖得更高却看得更少，是判据把「贴合光标」压过「多露几路」的症状。
+    // 654×880 实测曾出现 0.30→10 路而 0.42→4 路。
+    for (const W of [480, 654, 820, 1100]) {
+      for (const H of [480, 640, 880]) {
+        let prevVisible = 0;
+        let prevNeed = 0;
+        for (let frac = 0.2; frac <= 0.9; frac += 0.03) {
+          const p = solve(W, H, H * frac);
+          // 机位区变高时，可见路数最多回落 1 路（换列数导致的正常抖动），
+          // 不允许出现「高度涨了、路数腰斩」
+          if (p.need >= prevNeed) {
+            expect(p.visible).toBeGreaterThanOrEqual(Math.min(prevVisible - 1, GRID_TOTAL));
+          }
+          prevVisible = p.visible;
+          prevNeed = p.need;
+        }
+      }
+    }
+  });
+
   it('格子不窄于下限（除非一列都放不下）', () => {
     for (const W of WIDTHS) {
       const p = solve(W, 640, 400);

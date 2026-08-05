@@ -83,8 +83,10 @@ html { scroll-snap-type: y proximity; }
 .sg-sep:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 
 /* 机位区高度恒等于整行高度，多出的行由 overflow 裁掉——
-   拖动时它们是被沙盘盖住/被容器切掉，不会先一步凭空消失 */
-.sg-tiles { display:grid; gap:6px; overflow:hidden; flex:none; align-content:start; }
+   拖动时它们是被沙盘盖住/被容器切掉，不会先一步凭空消失。
+   justify-content:center 让整组格子居中：列宽虽然铺满，但最后一行可能不满
+   （十路除不尽列数时），不居中的话那一行会孤零零地贴在左边 */
+.sg-tiles { display:grid; gap:6px; overflow:hidden; min-height:0; align-content:start; justify-content:center; }
 
 .sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:transform .2s cubic-bezier(.2,0,0,1), box-shadow .15s ease, border-color .15s ease; }
 .sg-tile.red { border-left:3px solid var(--red); }

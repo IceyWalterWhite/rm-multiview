@@ -21,6 +21,9 @@ export const GRID_TOTAL = 10;
 const MIN_TILE_FRAC = 0.22;
 const MIN_TILE_PX = 120;
 
+/** 格子宽上限（占容器宽的比例）。挡掉「一格吃掉大半宽度」的退化排布 */
+const MAX_TILE_FRAC = 0.55;
+
 /** 机位区最多占容器多高 —— 留一线给沙盘，不让它被挤没 */
 const MAX_AREA_FRAC = 0.94;
 
@@ -63,47 +66,59 @@ function make(cols: number, rows: number, tw: number): GridPlan {
 }
 
 /**
+ * 选列数 —— **只看容器宽高，不看期望高度**。
+ *
+ * 于是拖横条只改行数、不改列数：格子尺寸与位置全程不动，只有露出的行数在变。
+ * 这正是「整档切换」该有的样子。让列数也跟着期望高度浮动的话，拖动中十路画面
+ * 会随列数跳变整体改尺寸，而且可见路数会倒退（实测出现过「机位区拖高了、
+ * 可见路数反而从 10 掉到 6」）。
+ *
+ * 取**能把全部十路装进容器的最小列数**：列数越少格子越大，所以第一个装得下的
+ * 就是格子最大的那个。都装不下时退回允许的最大列数 —— 格子最小、每屏露得最多。
+ */
+function chooseCols(W: number, H: number): number {
+  const minW = minTileWidth(W);
+  const maxH = H * MAX_AREA_FRAC;
+  let widest = 1;
+  for (let cols = 1; cols <= GRID_TOTAL; cols++) {
+    const tw = (W - GRID_GAP * (cols - 1)) / cols;
+    if (cols > 1 && tw < minW) break;
+    // 容器宽到放得下两列时，不许「一个格子吃掉大半宽度」——
+    // 那会让十路里只剩一两路看得见，与多视角的目的正好相反
+    if (tw > W * MAX_TILE_FRAC && W >= minW * 2 + GRID_GAP) continue;
+    widest = cols;
+    const th = (tw * 9) / 16;
+    const rows = rowsForAll(cols);
+    if (rows * th + GRID_GAP * (rows - 1) <= maxH) return cols;
+  }
+  return widest;
+}
+
+/**
  * 解出最贴近 `desiredH` 的排布。
  *
  * 列宽铺满 → 行高由 16:9 定 → 可见高度只能取整行的离散值，
- * 于是「任意高度都能被某个 (列, 行) 组合精确填满」——既 1:1 跟手，又永不留缝。
+ * 于是「任意高度都能被某一行数精确填满」——既 1:1 跟手，又永不留缝。
  */
 export function solve(W: number, H: number, desiredH: number): GridPlan {
   const maxH = H * MAX_AREA_FRAC;
   const target = Math.max(0, Math.min(desiredH, maxH));
-  const minW = minTileWidth(W);
+  const cols = chooseCols(W, H);
+  const tw = (W - GRID_GAP * (cols - 1)) / cols;
+  const th = (tw * 9) / 16;
 
-  let best: GridPlan | null = null;
+  // 容器矮到一行都放不下：压扁到塞得进去，绝不返回空
+  if (th > maxH) return make(cols, 1, maxH > 0 ? (maxH * 16) / 9 : tw);
+
+  let bestRows = 1;
   let bestD = Infinity;
-
-  for (let cols = 1; cols <= GRID_TOTAL; cols++) {
-    const tw = (W - GRID_GAP * (cols - 1)) / cols;
-    // 单列永远允许：再窄也得给用户看点东西
-    if (cols > 1 && tw < minW) break;
-    const th = (tw * 9) / 16;
-    if (th <= 0) break;
-
-    for (let rows = 1; rows <= rowsForAll(cols); rows++) {
-      const need = rows * th + GRID_GAP * (rows - 1);
-      if (need > maxH) break;
-      const d = Math.abs(need - target);
-      const cand = make(cols, rows, tw);
-      // 差距相当（1px 内）时选可见格子多的：同样的高度当然是多露几路更好
-      if (d < bestD - 1 || (Math.abs(d - bestD) <= 1 && best !== null && cand.visible > best.visible)) {
-        best = cand;
-        bestD = d;
-      }
-    }
+  for (let rows = 1; rows <= rowsForAll(cols); rows++) {
+    const need = rows * th + GRID_GAP * (rows - 1);
+    if (need > maxH) break;
+    const d = Math.abs(need - target);
+    if (d < bestD) { bestD = d; bestRows = rows; }
   }
-
-  // 容器矮到一行都放不下：给一个塞得进去的单格排布，绝不返回空
-  if (!best) {
-    const tw = W;
-    const th = (tw * 9) / 16;
-    const scale = th > maxH && th > 0 ? maxH / th : 1;
-    return make(1, 1, tw * scale);
-  }
-  return best;
+  return make(cols, bestRows, tw);
 }
 
 /**
