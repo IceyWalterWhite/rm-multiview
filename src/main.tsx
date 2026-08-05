@@ -10,10 +10,22 @@ import './theme.css';
 const onVercel = location.hostname.endsWith('.vercel.app');
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
+const params = new URLSearchParams(location.search);
 // ?demo=… → 人气助威条预览（假数据，不出网）。旧的全量假直播演示已废弃。
-const demoParam = new URLSearchParams(location.search).get('demo');
+const demoParam = params.get('demo');
+// ?stagedemo → 用假名单驱动完整舞台，没有直播时也能调布局。
+// import.meta.env.DEV 守卫：生产构建里这支连同 StageDemo 一起被 DCE
+const stageDemo = import.meta.env.DEV && params.has('stagedemo');
 
-if (demoParam !== null) {
+if (stageDemo) {
+  void import('./demo/StageDemo').then(({ default: StageDemo }) => {
+    root.render(
+      <React.StrictMode>
+        <StageDemo />
+      </React.StrictMode>
+    );
+  });
+} else if (demoParam !== null) {
   void import('./demo/DemoApp').then(({ default: DemoApp }) => {
     root.render(
       <React.StrictMode>

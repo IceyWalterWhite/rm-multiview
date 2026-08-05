@@ -65,6 +65,57 @@ html { scroll-snap-type: y proximity; }
 .main-stage { flex:1; min-width:0; position:relative; z-index:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#000; }
 /* 太窄（主视角比侧列还小）时盖住所有视角的提示遮罩 */
 .stage-cover { position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:rgba(8,10,14,.94); color:var(--accent); font-size:1.25rem; font-weight:700; letter-spacing:2px; text-align:center; padding:20px; }
+
+/* ---- grid 布局：主视角 | 机位网格 + 沙盘 ---- */
+/* 与 wings 并列的第二套舞台。左右、上下各一条可拖分隔条，
+   排布由 stage/gridSolve 在渲染期现算——这里只负责把算出来的数落到盒子上。 */
+.stage-grid { display:flex; flex:1; min-height:0; gap:0; }
+.sg-main { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.sg-right { position:relative; flex:1; min-width:0; display:flex; flex-direction:column; }
+
+/* 分隔条：命中区比视觉宽，细线只是提示，别让用户去瞄准 2px */
+.sg-sep { flex:none; display:flex; align-items:center; justify-content:center; border-radius:5px; background:transparent; transition:background-color .15s ease; touch-action:none; }
+.sg-sep:hover { background:rgba(255,213,74,.10); }
+.sg-sep--col { width:10px; cursor:col-resize; }
+.sg-sep--col > span { width:2px; height:34px; border-radius:1px; background:var(--line-strong); }
+.sg-sep--row { height:10px; cursor:row-resize; }
+.sg-sep--row > span { height:2px; width:34px; border-radius:1px; background:var(--line-strong); }
+.sg-sep:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+
+/* 机位区高度恒等于整行高度，多出的行由 overflow 裁掉——
+   拖动时它们是被沙盘盖住/被容器切掉，不会先一步凭空消失 */
+.sg-tiles { display:grid; gap:6px; overflow:hidden; flex:none; align-content:start; }
+
+.sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:transform .2s cubic-bezier(.2,0,0,1), box-shadow .15s ease, border-color .15s ease; }
+.sg-tile.red { border-left:3px solid var(--red); }
+.sg-tile.blue { border-right:3px solid var(--blue); }
+.sg-tile:hover { box-shadow:0 0 0 1px var(--line-strong); }
+.sg-tile:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
+/* 选中 = 待替换的落点，要一眼看得出来，所以用 accent 描边而非淡淡的高亮 */
+.sg-tile.selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+/* 拖动中的那一路脱手跟指针走：不吃过渡（1:1），并压在其余格子之上 */
+.sg-tile.dragging { z-index:20; cursor:grabbing; box-shadow:0 8px 32px rgba(0,0,0,.7); opacity:.92; }
+.sg-tile-video { width:100%; height:100%; object-fit:cover; display:block; }
+.sg-tile-name { position:absolute; left:6px; bottom:4px; font-size:.6875rem; color:var(--text-secondary); text-shadow:0 1px 3px rgba(0,0,0,.9); pointer-events:none; }
+
+/* 沙盘组：静止时在文档流里，拖横条时整组绝对定位跟手上滑并盖住下面几路机位 */
+.sg-lower { display:flex; flex-direction:column; flex:1; min-height:0; }
+.sg-sandbox { flex:1; min-height:0; display:flex; }
+
+/* 布局切换：单一入口，栏上只占一个可点目标 */
+.layout-menu { position:relative; display:inline-flex; }
+.layout-menu__btn { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.layout-menu__cur { color:var(--text); }
+.layout-menu__panel { position:absolute; bottom:calc(100% + 6px); left:0; z-index:40; display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:rgba(15,19,28,.92); backdrop-filter:blur(16px); box-shadow:0 10px 34px rgba(0,0,0,.6); animation:pop-in .18s cubic-bezier(.2,0,0,1); }
+.layout-menu__opt { display:flex; align-items:center; gap:10px; padding:7px 12px 7px 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:.8125rem; white-space:nowrap; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.layout-menu__opt:hover { background:rgba(255,255,255,.06); color:var(--text); }
+.layout-menu__opt.active { color:var(--accent); border-color:var(--line-strong); }
+@keyframes pop-in { from { opacity:0; transform:scale(.96) translateY(6px); } to { opacity:1; transform:none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-tile { transition:none; }
+  .layout-menu__panel { animation:none; }
+}
 /* 无直播：第一屏遮罩占满首屏（height:100vh），第二屏照常在下方，可下滚查看 */
 .offline-stage { align-items:center; justify-content:center; }
 .offline-title { color:var(--accent); font-size:1.375rem; font-weight:700; letter-spacing:2px; text-align:center; padding:20px 20px 8px; }

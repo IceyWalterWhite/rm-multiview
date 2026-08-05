@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
 import { MainStage } from './MainStage';
 import { QualityControls } from './QualityControls';
 import { DanmakuComposer } from './DanmakuComposer';
+import { LayoutMenu, type StageLayout } from './LayoutMenu';
+import { StageGrid } from './StageGrid';
 import { useMatchTitle } from '../hooks/useMatchTitle';
 import { useEnlarged } from '../hooks/useEnlarged';
 import { prefersReducedMotion } from '../a11y';
@@ -12,9 +14,17 @@ import { SyncEngine } from '../sync/engine';
 import { AudioCalibrator, createAdtsDecoder } from '../sync/audioCalib';
 import { demuxAudio } from '../sync/tsDemux';
 import { parseFragName } from '../sync/nameClock';
+import { reconcile } from '../stage/viewOrder';
 
 const SYNC_PREF_KEY = 'rm.timecodeSync';
 const TRIM_KEY = 'rm.sync.trim';
+const LAYOUT_KEY = 'rm.stageLayout';
+
+/**
+ * 沙盘只在 grid 布局下才渲染，所以整个模块（含 three.js 与 7.6 MiB 场地）
+ * 挂在这个懒加载边界后面。默认布局 wings 一个字节都不下。
+ */
+const SandboxMap = lazy(() => import('./SandboxMap').then((m) => ({ default: m.SandboxMap })));
 
 interface Props {
   catalog: ZoneCatalog;
@@ -42,6 +52,28 @@ export function LiveStage(p: Props) {
   // toggle/clear 引用稳定，才不会击穿 SideColumn 的 memo（弹幕批次不该重渲染 11 路机位）
   const { stacks, toggle, clear } = useEnlarged(rowRef);
   const matchTitle = useMatchTitle(p.catalog.zoneName);
+
+  // 舞台布局：wings（三栏，默认）/ grid（主视角 + 网格 + 沙盘）
+  const [layout, setLayout] = useState<StageLayout>(
+    () => (localStorage.getItem(LAYOUT_KEY) === 'grid' ? 'grid' : 'wings'),
+  );
+  useEffect(() => { localStorage.setItem(LAYOUT_KEY, layout); }, [layout]);
+
+  // grid 的十路显示顺序。state 里只存「用户排过的次序」，实际顺序在渲染期由它
+  // 与最新名单现算 —— 不用 effect 去同步，于是不存在过期值，也没有级联渲染。
+  //
+  // 名单用字符串 key 而非数组身份判等：useCatalog 在 HLS 签名过期时会重取并产出
+  // 内容相同的新数组，而签名过期在一场比赛里会反复发生。按身份重建的话，
+  // 用户拖好的排布会被反复清零。
+  const allViews = useMemo(
+    () => [...p.catalog.redViews, ...p.catalog.blueViews],
+    [p.catalog.redViews, p.catalog.blueViews],
+  );
+  const rosterKey = allViews.map((v) => v.id).join('|');
+  const roster = useMemo(() => rosterKey.split('|').filter(Boolean), [rosterKey]);
+  const [userOrder, setUserOrder] = useState<string[]>([]);
+  const order = useMemo(() => reconcile(userOrder, roster), [userOrder, roster]);
+  const [selected, setSelected] = useState<string | null>(null);
 
   // 时码同步引擎：单例、引用稳定（memo 安全）；开关默认开，偏好入 localStorage
   // useState 的惰性初始化而非 useRef 懒建：同样只构造一次、引用同样稳定，
@@ -146,30 +178,62 @@ export function LiveStage(p: Props) {
     document.getElementById('community')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
+  const mainStage = (
+    <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
+  );
+
+  const controls = (
+    <div className="controls">
+      <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
+      <LayoutMenu value={layout} onChange={setLayout} />
+      {p.watchTaskSlot}
+      {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
+      {p.danmakuEnabled && (
+        <DanmakuComposer
+          profile={p.profile}
+          isComplete={p.isComplete}
+          onSend={p.onSend}
+          onEditIdentity={p.onEditIdentity}
+          leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
+        />
+      )}
+      {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
+      <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
+    </div>
+  );
+
+  if (layout === 'grid') {
+    return (
+      <section className="live-stage" aria-label="直播视角">
+        <StageGrid
+          views={allViews}
+          order={order}
+          onReorder={setUserOrder}
+          selected={selected}
+          onSelect={setSelected}
+          quality={p.multiQuality}
+          onSignatureExpired={p.onSignatureExpired}
+          syncEngine={syncEngine}
+          mainSlot={<>{mainStage}{controls}</>}
+          sandboxSlot={
+            <Suspense fallback={<div className="sandbox"><div className="sandbox-cover">沙盘加载中…</div></div>}>
+              <SandboxMap catalog={p.catalog} />
+            </Suspense>
+          }
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
+        {mainStage}
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>
-      <div className="controls">
-        <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
-        {p.watchTaskSlot}
-        {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
-        {p.danmakuEnabled && (
-          <DanmakuComposer
-            profile={p.profile}
-            isComplete={p.isComplete}
-            onSend={p.onSend}
-            onEditIdentity={p.onEditIdentity}
-            leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
-          />
-        )}
-        {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
-        <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
-      </div>
+      {controls}
     </section>
   );
 }
