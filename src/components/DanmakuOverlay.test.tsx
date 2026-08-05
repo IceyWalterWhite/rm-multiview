@@ -28,6 +28,43 @@ describe('DanmakuOverlay', () => {
     expect(screen.getByText('CCC')).toBeInTheDocument();
   });
 
+  // 后台标签页里 CSS 动画不推进、animationend 不触发，投进去的弹幕只进不出；
+  // 若照常投放会一路堆到上限，回到前台同时起飞——「切后台再回来会爆发」的成因。
+  it('does not launch danmaku while the tab is hidden', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={[mk('a', 'AAA'), mk('b', 'BBB')]} />);
+    expect(document.querySelectorAll('.dm-fly')).toHaveLength(0);
+    hidden.mockRestore();
+  });
+
+  // 离开期间到达的弹幕不补放：它们已计入 seen，回到前台只放此后的新消息
+  it('does not replay danmaku that arrived while hidden', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    const missed = [mk('a', 'AAA'), mk('b', 'BBB')];
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={missed} />);
+
+    hidden.mockReturnValue(false);
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    rerender(<DanmakuOverlay messages={[...missed, mk('c', 'CCC')]} />);
+
+    expect(screen.queryByText('AAA')).not.toBeInTheDocument();
+    expect(screen.queryByText('BBB')).not.toBeInTheDocument();
+    expect(screen.getByText('CCC')).toBeInTheDocument();
+    hidden.mockRestore();
+  });
+
+  // 回到前台清空积压：离开期间冻在半空的是过期内容，放完只会和新弹幕挤在一起
+  it('clears mid-flight danmaku when returning to the foreground', () => {
+    const { rerender } = render(<DanmakuOverlay messages={[]} />);
+    rerender(<DanmakuOverlay messages={[mk('a', 'AAA')]} />);
+    expect(screen.getByText('AAA')).toBeInTheDocument();
+
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); }); // hidden=false → 回到前台
+    expect(screen.queryByText('AAA')).not.toBeInTheDocument();
+  });
+
   it('uses component mount time rather than first-message effect time', () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

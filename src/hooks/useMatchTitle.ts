@@ -4,7 +4,7 @@ import { fetchMatchTitle } from '../data/match';
 
 const POLL_MS = 20000;
 
-type Fetcher = (zoneName: string) => Promise<MatchTitle | null>;
+export type TitleFetcher = (zoneName: string) => Promise<MatchTitle | null>;
 type TitleState = { zoneName: string; title: MatchTitle | null };
 
 /**
@@ -14,7 +14,7 @@ type TitleState = { zoneName: string; title: MatchTitle | null };
  */
 export function useMatchTitle(
   zoneName: string,
-  fetcher: Fetcher = fetchMatchTitle,
+  fetcher: TitleFetcher = fetchMatchTitle,
   pollMs: number = POLL_MS,
 ): MatchTitle | null {
   const [state, setState] = useState<TitleState>({ zoneName, title: null });

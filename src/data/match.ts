@@ -28,6 +28,7 @@ function college(side: MatchSide | undefined): string {
 function team(side: MatchSide | undefined): string {
   return String(side?.player?.team?.name ?? '');
 }
+// player 可能为 null（数据里确实有这种场次），逐层可选取值后再降级为空串
 function sideLabel(side: MatchSide | undefined): string {
   return [college(side), team(side)].filter(Boolean).join(' ');
 }
@@ -48,8 +49,7 @@ export function formatMatchTitle(match: MatchEntry): string {
   return [head, red, blue].filter(Boolean).join(' ');
 }
 
-// current_and_next_matches.json 是数组，每元素对应一个赛区。
-// 按 zone.name === zoneName 定位该赛区元素，优先 currentMatch，无则退回 nextMatch，再无返回 null。
+// current_and_next_matches.json 是数组，每元素对应一个赛区
 function findZoneEntry(json: unknown, zoneName: string): ZoneEntry | undefined {
   const arr: ZoneEntry[] = Array.isArray(json) ? json : [];
   return arr.find((e) => {
@@ -58,42 +58,50 @@ function findZoneEntry(json: unknown, zoneName: string): ZoneEntry | undefined {
   });
 }
 
+// 按 zone.name === zoneName 定位该赛区元素，优先 currentMatch，无则退回 nextMatch，再无返回 null。
 export function parseCurrentMatch(json: unknown, zoneName: string): MatchTitle | null {
   const el = findZoneEntry(json, zoneName);
   if (!el) return null;
   const m = el.currentMatch ?? el.nextMatch;
   return m ? { text: formatMatchTitle(m), isNext: !el.currentMatch } : null;}
 
+/**
+ * 助威目标。与 parseCurrentMatch 的关键区别：**只认 currentMatch**——
+ * nextMatch 还没开打，官方不接受投票，退回去会投到错误的场次上。
+ * 缺 matchId 或任一方 teamId（player 可能为 null）一律返回 null，上层据此隐藏助威。
+ */
 export function parseCheerTarget(json: unknown, zoneName: string): CheerTarget | null {
-  const match = findZoneEntry(json, zoneName)?.currentMatch;
-  if (!match) return null;
-  const matchId = match.id === undefined || match.id === null ? '' : String(match.id);
-  const redTeamId = teamId(match.redSide);
-  const blueTeamId = teamId(match.blueSide);
+  const m = findZoneEntry(json, zoneName)?.currentMatch;
+  if (!m) return null;
+  const matchId = m.id === undefined || m.id === null ? '' : String(m.id);
+  const redTeamId = teamId(m.redSide);
+  const blueTeamId = teamId(m.blueSide);
   if (!matchId || !redTeamId || !blueTeamId) return null;
   return {
     matchId,
     redTeamId,
     blueTeamId,
-    redLabel: sideLabel(match.redSide),
-    blueLabel: sideLabel(match.blueSide),
+    redLabel: sideLabel(m.redSide),
+    blueLabel: sideLabel(m.blueSide),
   };
+}
+
+async function fetchMatches(url: string): Promise<unknown> {
+  const res = await fetch(url, { cache: 'no-store' }); // 实时拉取，与 live_game_info 一致
+  if (!res.ok) throw new Error(`current_and_next_matches fetch failed: ${res.status}`);
+  return res.json();
 }
 
 export async function fetchMatchTitle(
   zoneName: string,
   url: string = CURRENT_MATCHES_URL,
 ): Promise<MatchTitle | null> {
-  const res = await fetch(url, { cache: 'no-store' }); // 实时拉取，与 live_game_info 一致
-  if (!res.ok) throw new Error(`current_and_next_matches fetch failed: ${res.status}`);
-  return parseCurrentMatch(await res.json(), zoneName);
+  return parseCurrentMatch(await fetchMatches(url), zoneName);
 }
 
 export async function fetchCheerTarget(
   zoneName: string,
   url: string = CURRENT_MATCHES_URL,
 ): Promise<CheerTarget | null> {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`current_and_next_matches fetch failed: ${res.status}`);
-  return parseCheerTarget(await res.json(), zoneName);
+  return parseCheerTarget(await fetchMatches(url), zoneName);
 }

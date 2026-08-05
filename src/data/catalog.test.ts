@@ -8,6 +8,7 @@ describe('parseLiveGameInfo', () => {
   it('selects the liveState===1 zone', () => {
     expect(cat.zoneName).toBe('北部赛区');
     expect(cat.chatRoomId).toBe('69ff0439fa62cf0ebe01d583');
+    expect(cat.liveState).toBe(1);
   });
 
   it('main view comes from zoneLiveString with 3 qualities', () => {
@@ -29,5 +30,34 @@ describe('parseLiveGameInfo', () => {
 
   it('throws NoLiveZoneError when no zone is live (event not started / ended)', () => {
     expect(() => parseLiveGameInfo({ eventData: [{ liveState: 0 }] })).toThrow(NoLiveZoneError);
+  });
+
+  describe('cheer / watch-task fields', () => {
+    it('reads matchState from the live zone', () => {
+      expect(cat.matchState).toBe(1);
+    });
+
+    it('reads zoneId as a string (心跳要带) and openVote from top-level commonConfig', () => {
+      const c = parseLiveGameInfo({
+        commonConfig: { openVote: 1 },
+        eventData: [{ liveState: 1, zoneName: '北部赛区', zoneId: 617, matchState: 1 }],
+      });
+      expect(c.zoneId).toBe('617');
+      expect(c.openVote).toBe(1);
+    });
+
+    it('defaults the three new fields to safe "feature off" values when absent', () => {
+      const c = parseLiveGameInfo({ eventData: [{ liveState: 1, zoneName: 'z' }] });
+      expect(c.zoneId).toBe('');
+      expect(c.matchState).toBe(0);
+      expect(c.openVote).toBe(0); // 夹具没有 commonConfig：不开投票
+    });
+
+    it('falls back to a zone-level commonConfig', () => {
+      const c = parseLiveGameInfo({
+        eventData: [{ liveState: 1, zoneName: 'z', commonConfig: { openVote: 1 } }],
+      });
+      expect(c.openVote).toBe(1);
+    });
   });
 });

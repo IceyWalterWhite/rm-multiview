@@ -10,11 +10,16 @@ function streamId(src: string): string {
 // We only declare the fields we actually read; everything else stays unknown.
 interface LiveZone {
   liveState?: number;
+  matchState?: unknown;   // 1 = 比赛进行中
+  zoneId?: unknown;       // 赛区 id
   zoneName?: string;
   chatRoomId?: string;
   zoneLiveString?: unknown[];
   fpvData?: FpvEntry[];
+  commonConfig?: CommonConfig;
 }
+
+interface CommonConfig { openVote?: unknown }
 
 interface FpvEntry {
   role?: string;
@@ -51,8 +56,13 @@ export class NoLiveZoneError extends Error {
   }
 }
 
+function toNumber(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function parseLiveGameInfo(json: unknown): ZoneCatalog {
-  const payload = json as { eventData?: LiveZone[] } | null;
+  const payload = json as { eventData?: LiveZone[]; commonConfig?: CommonConfig } | null;
   const zones: LiveZone[] = payload?.eventData ?? [];
   const zone = zones.find((z) => z?.liveState === 1);
   if (!zone) throw new NoLiveZoneError();
@@ -76,7 +86,19 @@ export function parseLiveGameInfo(json: unknown): ZoneCatalog {
     else if (view.side === 'blue') blueViews.push(view);
   }
 
-  return { zoneName: String(zone.zoneName ?? ''), chatRoomId: String(zone.chatRoomId ?? ''), main, redViews, blueViews };
+  // openVote 取顶层 commonConfig，赛区级同名字段作兜底（嵌套位置未逐版本核实，取不到就是 0）。
+  // 注：本站投不了票（vote 接口跨源发不出去），这里只是如实解析官方那侧的开关。
+  const openVote = toNumber(payload?.commonConfig?.openVote ?? zone.commonConfig?.openVote);
+
+  return {
+    zoneName: String(zone.zoneName ?? ''),
+    chatRoomId: String(zone.chatRoomId ?? ''),
+    main, redViews, blueViews,
+    zoneId: String(zone.zoneId ?? ''),
+    liveState: toNumber(zone.liveState),
+    matchState: toNumber(zone.matchState),
+    openVote,
+  };
 }
 
 export async function fetchCatalog(url: string = LIVE_GAME_INFO_URL): Promise<ZoneCatalog> {

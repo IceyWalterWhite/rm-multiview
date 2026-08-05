@@ -15,12 +15,35 @@ const mockCheer = vi.hoisted(() => ({
   },
 }));
 
+const mockWatchTask = vi.hoisted(() => ({
+  current: {
+    loggedIn: false,
+    accumulatedSeconds: 0,
+    earnedPellets: 0,
+    tiers: [],
+    officialUrl: 'https://www.robomaster.com/live',
+    loginUrl: 'https://www.robomaster.com/api/members/oauth',
+    bridgeStatus: 'missing' as const,
+    heartbeatStatus: 'idle' as const,
+    heartbeatError: null,
+    retryHeartbeat: vi.fn(),
+  },
+}));
+
 vi.mock('./hooks/useCatalog', () => ({
   useCatalog: () => ({ state: mockState.current, refresh: vi.fn() }),
 }));
 
 vi.mock('./hooks/useCheer', () => ({
   useCheer: () => mockCheer.current,
+}));
+
+vi.mock('./hooks/useWatchTask', () => ({
+  useWatchTask: () => mockWatchTask.current,
+}));
+
+vi.mock('./hooks/useOfficialBridge', () => ({
+  useOfficialBridge: () => ({ status: 'missing', request: vi.fn(), retry: vi.fn() }),
 }));
 
 describe('App', () => {
@@ -64,6 +87,22 @@ describe('App', () => {
     render(<App />);
     expect(screen.queryByRole('group', { name: '人气助威' })).not.toBeInTheDocument();
     mockCheer.current.visible = true;
+  });
+
+  it('mounts the official bridge setup entry in the live app', () => {
+    mockState.current = {
+      status: 'live',
+      catalog: {
+        zoneName: '搭建直播',
+        chatRoomId: '',
+        main: { id: 'm', role: '主视角', side: 'main', sources: [] },
+        redViews: [],
+        blueViews: [],
+      },
+    };
+    const { container } = render(<App />);
+    expect(container.querySelector('.watch-capsule')).not.toBeNull();
+    expect(screen.getByRole('link', { name: '一键安装直播助手' })).toHaveAttribute('href', '/rmlive-companion.user.js');
   });
 
   it('shows a loading indicator instead of a blank screen while catalog loads', () => {

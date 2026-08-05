@@ -8,7 +8,7 @@ import { MatchTitleBar } from './MatchTitleBar';
 import { SyncControl } from './SyncControl';
 import { sourceForQuality } from '../data/streams';
 
-export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim }: {
+export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, onPlayingChange, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim }: {
   main: StreamView;
   quality: QualityLabel;
   titleFallback: string;
@@ -17,6 +17,8 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
   showDanmaku: boolean;
   cheerSlot?: ReactNode;
   onSignatureExpired?: () => void;
+  /** 播放态回传：观看时长心跳要求主视角确实在播 */
+  onPlayingChange?: (playing: boolean) => void;
   syncEngine?: SyncEngine;
   /** 时码同步开关与微调：控件悬浮在本组件右上角，与静音同处一区 */
   syncOn?: boolean;
@@ -44,6 +46,7 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
         muted={muted}
         className="main-video"
         onSignatureExpired={onSignatureExpired}
+        onPlayingChange={onPlayingChange}
         keepAliveWhenHidden
         syncEngine={syncEngine}
         syncId={main.id}
