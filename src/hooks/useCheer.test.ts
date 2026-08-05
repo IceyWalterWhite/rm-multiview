@@ -69,13 +69,28 @@ describe('useCheer', () => {
     expect(result.current.canVote).toBe(true);
     expect(result.current.officialUrl).toBe('https://www.robomaster.com/live');
 
+    // openVote 是官方 PC 前端自己的显示开关，不等于投票通道关闭：2026-08-05 全国赛决赛期间
+    // 实测 openVote=0 而 cheer/info 的 voteEnabled=true，票数每 10 秒真实增长数十票。
+    // 能不能投以接口的答复为准，见下一个用例。
     rerender({ c: catalog({ openVote: 0 }), loggedIn: true });
-    expect(result.current.canVote).toBe(false);
+    expect(result.current.canVote).toBe(true);
     rerender({ c: catalog({ matchState: 0 }), loggedIn: true });
     expect(result.current.canVote).toBe(false);
     rerender({ c: catalog({ liveState: 0 }), loggedIn: true });
     expect(result.current.canVote).toBe(false);
     rerender({ c: catalog(), loggedIn: false });
+    expect(result.current.canVote).toBe(false);
+  });
+
+  it('refuses to vote when the official endpoint itself reports voting closed', async () => {
+    // voteEnabled 是唯一权威：官方前端开关开着也压不过接口说「这场不接受投票」。
+    const { result } = renderHook(() => useCheer(catalog({ openVote: 1 }), deps({
+      bridge: bridge(),
+      loggedIn: true,
+      fetchInfo: async () => ({ ...INFO, voteEnabled: false }),
+    })));
+    await settle();
+    expect(result.current.visible).toBe(true);
     expect(result.current.canVote).toBe(false);
   });
 

@@ -168,13 +168,17 @@ export function useCheer(catalog: ZoneCatalog | null, deps: CheerDeps = NO_DEPS)
     return () => { alive = false; clearInterval(timer); };
   }, [target, key, infoPollMs, proxyMissing]);
 
+  // 能否投票以官方 cheer/info 的 voteEnabled 为准，**不看** live_game_info 的 commonConfig.openVote。
+  // 两者是不同的东西：openVote 是官方 PC 前端自己的显示开关（他们据此隐藏助威条），
+  // voteEnabled 是投票接口对这一场次的实际答复。2026-08-05 全国赛决赛期间实测二者不一致——
+  // openVote=0 而 voteEnabled=true，且票数每 10 秒真实增长数十票（投票通道明确活着）。
+  // 把 openVote 当门槛会让我们在官方仍在计票时错误地禁掉投票，故只保留接口侧的权威判断。
   const canVote = Boolean(
     enabled
     && bridge?.status === 'ready'
     && loggedIn
     && catalog?.liveState === 1
     && catalog.matchState === 1
-    && catalog.openVote === 1
     && target
     && info?.voteEnabled,
   );
