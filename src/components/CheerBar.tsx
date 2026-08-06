@@ -41,6 +41,19 @@ export function CheerBar({
   const kind = useRef(0);
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
 
+  // 跟随光标的「点击投票」小字。位置每次 pointermove 直接写 DOM，不进 React ——
+  // 与 ObjectiveBars/RobotPanel 同一套做法，悬停扫过时零重渲染。
+  const tipRef = useRef<HTMLSpanElement>(null);
+  const moveTip = useCallback((e: React.PointerEvent) => {
+    const el = tipRef.current;
+    // 触屏没有「悬停」，提示只对鼠标出现
+    if (!el || e.pointerType !== 'mouse') return;
+    el.style.transform = `translate3d(${e.clientX + 14}px, ${e.clientY + 18}px, 0)`;
+    el.classList.add('is-on');
+  }, []);
+  const hideTip = useCallback(() => { tipRef.current?.classList.remove('is-on'); }, []);
+  useEffect(() => { if (!canVote) hideTip(); }, [canVote, hideTip]);
+
   const later = useCallback((fn: () => void, ms: number) => {
     const t = setTimeout(() => { timers.current.delete(t); fn(); }, ms);
     timers.current.add(t);
@@ -104,6 +117,9 @@ export function CheerBar({
         className={`${cls} cheer__team--vote`}
         aria-label={`为${label}助威`}
         onClick={() => onVote?.(side)}
+        onPointerEnter={moveTip}
+        onPointerMove={moveTip}
+        onPointerLeave={hideTip}
       >
         {inner}
       </button>
@@ -123,6 +139,7 @@ export function CheerBar({
       </div>
 
       {error && <span className="cheer-error" role="alert">{error}</span>}
+      {canVote && <span ref={tipRef} className="cheer__cursor-tip" aria-hidden="true">点击投票</span>}
 
       <div className="cheer__track">
         <span className="cheer__fill cheer__fill--red" style={{ width: `${redPct}%` }} aria-hidden="true" />

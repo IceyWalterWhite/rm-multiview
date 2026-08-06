@@ -82,8 +82,8 @@ export function StageGrid({
   const rightRef = useRef<HTMLDivElement>(null);
   const tilesRef = useRef<HTMLDivElement>(null);
 
-  const [leftPct, setLeftPct] = useState(58);
-  const [topFrac, setTopFrac] = useState(0.62);
+  const [leftPct, setLeftPct] = useState(50);
+  const [topFrac, setTopFrac] = useState(0.5);
   const [rc, setRc] = useState({ w: 0, h: 0 });
   /** 横条拖动中的光标位置（占容器高的比例）；null = 没在拖横条 */
   const [dragFrac, setDragFrac] = useState<number | null>(null);
