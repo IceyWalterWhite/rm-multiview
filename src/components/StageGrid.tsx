@@ -220,10 +220,9 @@ export function StageGrid({
   }, [selected, onSelect]);
 
   const byId = new Map(views.map((v) => [v.id, v]));
-  // 末行不满时的居中偏移（十路除不尽列数时必然发生）
-  const lastRowCount = order.length % plan.cols;
-  const firstOfLastRow = lastRowCount > 0 ? order.length - lastRowCount : -1;
-  const lastRowOffset = lastRowCount > 0 ? Math.floor((plan.cols - lastRowCount) / 2) : 0;
+  // 排进网格的是前 visible 路，其余挂到屏外 —— 见下面 sg-offscreen 的注释
+  const shown = order.slice(0, plan.visible);
+  const offscreen = order.slice(plan.visible);
 
   const lowerStyle: CSSProperties = dragFrac !== null
     ? {
@@ -271,17 +270,12 @@ export function StageGrid({
               : 'none',
           }}
         >
-          {order.map((id, index) => {
+          {shown.map((id, index) => {
             const v = byId.get(id);
             if (!v) return null;
             const dragging = drag?.id === id && drag.moved;
             const source = sourceForQuality(v, quality);
             let style: CSSProperties | undefined;
-            // 十路除不尽列数时末行不满（3 列就是 3+3+3+1）。把末行整体居中，
-            // 否则那一两格会孤零零贴在左边——justify-content 管不到行内的空缺。
-            if (index === firstOfLastRow && lastRowOffset > 0) {
-              style = { gridColumnStart: lastRowOffset + 1 };
-            }
             if (dragging && drag) {
               // 1:1 跟手且尊重抓取偏移。格子留在网格流里占位（让位动画才有参照），
               // 只用 transform 视觉上跟到指针 —— 落位差值按几何算，不在渲染期读 DOM。
@@ -338,6 +332,31 @@ export function StageGrid({
           </div>
           <div className="sg-sandbox">{sandboxSlot}</div>
         </div>
+
+        {/* 排不进网格的路：照常挂着解码，只是不给人看。
+            沙盘按 data-view-id 找 <video> 取像素，机器人面板的实时预览也从这里取 ——
+            显示与解码是两回事，不显示不等于要把流断掉。
+            用 1px + opacity 而非 display:none：后者会让浏览器把解码也停掉。 */}
+        {offscreen.length > 0 && (
+          <div className="sg-offscreen" aria-hidden="true">
+            {offscreen.map((id) => {
+              const v = byId.get(id);
+              if (!v) return null;
+              const source = sourceForQuality(v, quality);
+              return (
+                <div key={id} data-view-id={id}>
+                  <VideoPlayer
+                    src={source?.src}
+                    onSignatureExpired={onSignatureExpired}
+                    syncEngine={syncEngine}
+                    syncId={v.id}
+                    syncTier={source?.label ?? quality}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -73,8 +73,10 @@ export function useSandbox(
       if (stop) return;
       const targets: SampleTarget[] = [];
       for (const m of members) {
+        // 不限定容器类名：wings 的 .view-tile、grid 的 .sg-tile、以及 grid 里
+        // 排不进网格而挂在屏外的那几路，都带 data-view-id，一个选择器全覆盖
         const video = document.querySelector<HTMLVideoElement>(
-          `.view-tile[data-view-id="${CSS.escape(m.id)}"] video`,
+          `[data-view-id="${CSS.escape(m.id)}"] video`,
         );
         if (video) targets.push({ id: m.id, video, kind: m.kind });
       }

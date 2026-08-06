@@ -106,8 +106,16 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
 
   const cam = new THREE.PerspectiveCamera(50, 1, 0.05, 500);
   const ctl = new OrbitControls(cam, canvas);
+  // 操作手感一律 1:1 跟手，不要任何惯性或缓动 —— 沙盘是拿来快速找人的，
+  // 松手后还在滑、缩放追不上滚轮，都会让人多等一拍。
   ctl.enableDamping = false;
   ctl.zoomSpeed = 1.4;
+  // 缩放对准光标而不是画面中心：想看哪个角落就把光标放哪儿滚，
+  // 默认行为是一律朝 target 推进，放大边角时要反复补拖，那正是「不跟手」的来源
+  ctl.zoomToCursor = true;
+  // 平移按屏幕平面走，拖多少地图就走多少；默认沿相机正交面平移，
+  // 在这种俯视带倾角的机位下会拖出斜向偏移
+  ctl.screenSpacePanning = true;
 
   /**
    * 相机距离按画布宽高比算，不写死。
@@ -125,6 +133,18 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     const d = Math.max(HALF_W / Math.tan(hHalf), HALF_D / Math.tan(vHalf)) * 1.08;
     ctl.target.set(0, 0, -FIELD_CENTER_Y);
     cam.position.set(0, d * Math.cos(TILT), -FIELD_CENTER_Y + d * Math.sin(TILT));
+    /*
+     * 缩放范围锚在「整场刚好装下」这个距离上。
+     *
+     * 不设的话看似「没有限制」，实际更糟：dolly 是按比例缩 |相机−target| 的距离，
+     * 越近每格滚轮走的绝对距离越小，于是越放大越推不动；而旋转半径就是这个距离，
+     * 同一时刻拖动也跟着失灵。那不是到了边界，是渐近退化 —— 永远到不了头，
+     * 却一路越来越黏，比一个明确的硬停更让人以为卡住了。
+     *
+     * 下限 2 m：视野高约 1.9 m，一两台机器人占满画面，再近就只剩装甲板。
+     */
+    ctl.minDistance = 2;
+    ctl.maxDistance = d * 1.5;
     ctl.update();
   }
 

@@ -3,7 +3,7 @@ import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
 import { MainStage } from './MainStage';
-import { QualityControls } from './QualityControls';
+import { QualityMenu } from './QualityMenu';
 import { DanmakuComposer } from './DanmakuComposer';
 import { LayoutMenu, type StageLayout } from './LayoutMenu';
 import { StageGrid } from './StageGrid';
@@ -182,11 +182,19 @@ export function LiveStage(p: Props) {
     <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
   );
 
+  // 底栏两行：上行是「调一次就不再碰」的设置（各自收进单一入口）与状态，
+  // 下行是每条弹幕都要用的发送条。混成一行会让发送条被设置挤到很窄。
   const controls = (
     <div className="controls">
-      <QualityControls mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
-      <LayoutMenu value={layout} onChange={setLayout} />
-      {p.watchTaskSlot}
+      <div className="controls__row">
+        <QualityMenu mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
+        <LayoutMenu value={layout} onChange={setLayout} />
+        <div className="controls__tail">
+          {p.watchTaskSlot}
+          {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
+          <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
+        </div>
+      </div>
       {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
       {p.danmakuEnabled && (
         <DanmakuComposer
@@ -197,8 +205,6 @@ export function LiveStage(p: Props) {
           leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
         />
       )}
-      {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
-      <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
     </div>
   );
 

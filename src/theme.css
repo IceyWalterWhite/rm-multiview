@@ -104,19 +104,39 @@ html { scroll-snap-type: y proximity; }
 .sg-lower { display:flex; flex-direction:column; flex:1; min-height:0; }
 .sg-sandbox { flex:1; min-height:0; display:flex; }
 
-/* 布局切换：单一入口，栏上只占一个可点目标 */
-.layout-menu { position:relative; display:inline-flex; }
-.layout-menu__btn { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
-.layout-menu__cur { color:var(--text); }
-.layout-menu__panel { position:absolute; bottom:calc(100% + 6px); left:0; z-index:40; display:flex; flex-direction:column; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:rgba(15,19,28,.92); backdrop-filter:blur(16px); box-shadow:0 10px 34px rgba(0,0,0,.6); animation:pop-in .18s cubic-bezier(.2,0,0,1); }
-.layout-menu__opt { display:flex; align-items:center; gap:10px; padding:7px 12px 7px 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:.8125rem; white-space:nowrap; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
-.layout-menu__opt:hover { background:rgba(255,255,255,.06); color:var(--text); }
-.layout-menu__opt.active { color:var(--accent); border-color:var(--line-strong); }
+/* 排不进网格的路：留在 DOM 里继续解码，供沙盘取像素与面板预览用。
+   不用 display:none —— 那会让浏览器把解码一并停掉，沙盘就瞎了几路。 */
+.sg-offscreen { position:absolute; left:0; bottom:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; z-index:-1; }
+
+/* ---- 底栏收纳式菜单（画质 / 布局）---- */
+/* 观赛屏不铺控件带：每样设置只在栏上占一个可点目标 + 一段状态文字，
+   设置本身收进弹出面板 */
+.ctl-menu { position:relative; display:inline-flex; flex:none; }
+.ctl-menu__btn { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 9px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--text); font-size:.8125rem; line-height:1; white-space:nowrap; cursor:pointer; transition:border-color .15s ease; }
+.ctl-menu__btn:hover { border-color:var(--accent); }
+.ctl-menu__cur { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+.ctl-menu__caret { color:var(--text-secondary); font-size:.625rem; line-height:1; }
+/* 从触发它的按钮长出来（transform-origin 落在按钮那一侧），不是凭空淡入 */
+.ctl-menu__panel { position:absolute; bottom:calc(100% + 8px); left:0; z-index:40; width:236px; display:flex; flex-direction:column; gap:12px; padding:12px; border:1px solid var(--line-strong); border-radius:10px; background:rgba(28,32,38,.88); backdrop-filter:blur(20px) saturate(140%); -webkit-backdrop-filter:blur(20px) saturate(140%); box-shadow:0 14px 34px rgba(0,0,0,.6); transform-origin:bottom left; animation:pop-in .18s cubic-bezier(.2,0,0,1); }
+.ctl-menu__panel--layout { width:auto; gap:4px; padding:6px; }
+
+.ctl-field { display:flex; flex-direction:column; gap:6px; }
+.ctl-field__label { font-size:.75rem; color:var(--text-secondary); }
+/* 分段控件：三档并排在一个槽里，当前档实心 —— 比三个独立按钮更能表达「互斥」 */
+.seg { display:flex; gap:2px; padding:2px; background:#0f141c; border:1px solid var(--line); border-radius:7px; }
+.seg__opt { flex:1; padding:5px 0; border:none; border-radius:5px; background:transparent; color:var(--text-secondary); font-size:.75rem; line-height:1; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.seg__opt:hover { color:var(--text); }
+.seg__opt.active { background:var(--accent); color:#111; font-weight:700; }
+
+.layout-opt { display:flex; align-items:center; gap:10px; padding:7px 12px 7px 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:.8125rem; white-space:nowrap; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.layout-opt:hover { background:rgba(255,255,255,.06); color:var(--text); }
+.layout-opt.active { color:var(--accent); border-color:var(--line-strong); }
+
 @keyframes pop-in { from { opacity:0; transform:scale(.96) translateY(6px); } to { opacity:1; transform:none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .sg-tile { transition:none; }
-  .layout-menu__panel { animation:none; }
+  .ctl-menu__panel { animation:none; }
 }
 /* 无直播：第一屏遮罩占满首屏（height:100vh），第二屏照常在下方，可下滚查看 */
 .offline-stage { align-items:center; justify-content:center; }
@@ -141,7 +161,11 @@ html { scroll-snap-type: y proximity; }
 .match-title__seg { flex:none; padding-right:36px; }
 @keyframes match-title-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 
-.controls { display:flex; gap:10px; align-items:center; flex:none; flex-wrap:wrap; }
+/* 两行：上行设置与状态，下行发送条。混成一行的话发送条会被设置挤到很窄 */
+.controls { display:flex; flex-direction:column; gap:8px; flex:none; min-width:0; }
+.controls__row { display:flex; gap:10px; align-items:center; min-width:0; }
+/* 状态与路标推到最右：左边是「可点的设置」，右边是「看的信息」，两类不混排 */
+.controls__tail { margin-left:auto; display:flex; gap:10px; align-items:center; min-width:0; }
 .pill { background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:.8125rem; }
 .pill select { background:transparent; color:var(--accent); border:none; font-weight:700; }
 .pill option { background:var(--surface-2); color:var(--ink); } /* 防 UA 白底黄字（1.41:1） */

@@ -2,13 +2,12 @@
  * grid 布局的排布求解器。
  *
  * 唯一的排布来源：给机位区实测宽高 + 期望的可见高度，一次解出
- * 列数 / 可见行数 / 格子宽高。结果在渲染期现算、不存 state ——
+ * 列数 / 行数 / 格子宽高。结果在渲染期现算、不存 state ——
  * 于是任何时刻（首帧、切布局、改窗口、拖动中）都不可能是过期值。
  *
- * **十路恒在。** 网格永远铺满 {@link GRID_TOTAL} 个格子，沙盘绝对定位浮在
- * 它上面、盖住下部若干行。所以「可见行数」变的是遮挡边界，不是格子数量 ——
- * 十路 `<video>` 一路都不能少，沙盘要靠它们全都在解码才反解得出全场机器人。
- * （这一点与参考稿不同：那边行数上限取 `floor(total/cols)`，3 列时只排 9 格。）
+ * **网格里排的是「看得见的那几路」，不是全部十路。** 排不进来的路照样挂着
+ * 解码（见 StageGrid 的屏外容器），沙盘取像素与面板预览都不受影响 ——
+ * 解码与显示是两回事。
  */
 
 /** 机位之间的间距，横纵同值 */
@@ -17,8 +16,13 @@ export const GRID_GAP = 6;
 /** 每场恰好十路 FPV，双方各五台 */
 export const GRID_TOTAL = 10;
 
-/** 格子宽下限：容器宽的这个比例与 {@link MIN_TILE_PX} 取大 */
-const MIN_TILE_FRAC = 0.22;
+/**
+ * 格子宽下限：容器宽的这个比例与 {@link MIN_TILE_PX} 取大。
+ *
+ * 多视角的格子小到一定程度就失去意义 —— 看不清谁在干什么。34% 意味着
+ * 一行最多两格，这是参考稿定的下限（它的 minTilePct 滑块默认 34、范围 10~34）。
+ */
+const MIN_TILE_FRAC = 0.34;
 const MIN_TILE_PX = 120;
 
 /** 格子宽上限（占容器宽的比例）。挡掉「一格吃掉大半宽度」的退化排布 */
@@ -30,17 +34,17 @@ const MAX_AREA_FRAC = 0.94;
 export interface GridPlan {
   /** 列数 */
   cols: number;
-  /** 可见行数（沙盘上边界之上的完整行数） */
+  /** 行数 */
   rows: number;
-  /** 放下全部十格所需的行数 */
+  /** 这个列数下最多能排几行（满列） */
   totalRows: number;
   /** 格子宽 —— 列宽永远铺满机位区 */
   tw: number;
   /** 格子高 —— 恒守 16:9 */
   th: number;
-  /** 可见区高度，精确等于整行铺满的高度 */
+  /** 机位区高度，精确等于整行铺满的高度 */
   need: number;
-  /** 可见格子数 */
+  /** 排进网格的格子数 = cols × rows */
   visible: number;
 }
 
@@ -48,8 +52,9 @@ function minTileWidth(W: number): number {
   return Math.max(MIN_TILE_PX, W * MIN_TILE_FRAC);
 }
 
+/** 这个列数下的满列行数。排不满一行的零头不占行 —— 网格里不留半截空行 */
 function rowsForAll(cols: number): number {
-  return Math.ceil(GRID_TOTAL / cols);
+  return Math.max(1, Math.floor(GRID_TOTAL / cols));
 }
 
 function make(cols: number, rows: number, tw: number): GridPlan {
@@ -66,59 +71,46 @@ function make(cols: number, rows: number, tw: number): GridPlan {
 }
 
 /**
- * 选列数 —— **只看容器宽高，不看期望高度**。
- *
- * 于是拖横条只改行数、不改列数：格子尺寸与位置全程不动，只有露出的行数在变。
- * 这正是「整档切换」该有的样子。让列数也跟着期望高度浮动的话，拖动中十路画面
- * 会随列数跳变整体改尺寸，而且可见路数会倒退（实测出现过「机位区拖高了、
- * 可见路数反而从 10 掉到 6」）。
- *
- * 取**能把全部十路装进容器的最小列数**：列数越少格子越大，所以第一个装得下的
- * 就是格子最大的那个。都装不下时退回允许的最大列数 —— 格子最小、每屏露得最多。
- */
-function chooseCols(W: number, H: number): number {
-  const minW = minTileWidth(W);
-  const maxH = H * MAX_AREA_FRAC;
-  let widest = 1;
-  for (let cols = 1; cols <= GRID_TOTAL; cols++) {
-    const tw = (W - GRID_GAP * (cols - 1)) / cols;
-    if (cols > 1 && tw < minW) break;
-    // 容器宽到放得下两列时，不许「一个格子吃掉大半宽度」——
-    // 那会让十路里只剩一两路看得见，与多视角的目的正好相反
-    if (tw > W * MAX_TILE_FRAC && W >= minW * 2 + GRID_GAP) continue;
-    widest = cols;
-    const th = (tw * 9) / 16;
-    const rows = rowsForAll(cols);
-    if (rows * th + GRID_GAP * (rows - 1) <= maxH) return cols;
-  }
-  return widest;
-}
-
-/**
  * 解出最贴近 `desiredH` 的排布。
  *
- * 列宽铺满 → 行高由 16:9 定 → 可见高度只能取整行的离散值，
- * 于是「任意高度都能被某一行数精确填满」——既 1:1 跟手，又永不留缝。
+ * 列宽铺满 → 行高由 16:9 定 → 机位区高度只能取整行的离散值，
+ * 于是「任意高度都能被某个 (列,行) 组合精确填满」——既 1:1 跟手，又永不留缝。
  */
 export function solve(W: number, H: number, desiredH: number): GridPlan {
   const maxH = H * MAX_AREA_FRAC;
   const target = Math.max(0, Math.min(desiredH, maxH));
-  const cols = chooseCols(W, H);
-  const tw = (W - GRID_GAP * (cols - 1)) / cols;
-  const th = (tw * 9) / 16;
+  const minW = minTileWidth(W);
 
-  // 容器矮到一行都放不下：压扁到塞得进去，绝不返回空
-  if (th > maxH) return make(cols, 1, maxH > 0 ? (maxH * 16) / 9 : tw);
-
-  let bestRows = 1;
+  let best: GridPlan | null = null;
   let bestD = Infinity;
-  for (let rows = 1; rows <= rowsForAll(cols); rows++) {
-    const need = rows * th + GRID_GAP * (rows - 1);
-    if (need > maxH) break;
-    const d = Math.abs(need - target);
-    if (d < bestD) { bestD = d; bestRows = rows; }
+
+  for (let cols = 1; cols <= GRID_TOTAL; cols++) {
+    const tw = (W - GRID_GAP * (cols - 1)) / cols;
+    // 格子窄于下限就不再往下加列 —— 多视角小到看不清就没意义了
+    if (cols > 1 && tw < minW) break;
+    // 容器宽到放得下两列时，不许「一个格子吃掉大半宽度」的退化解：
+    // 那会让机位区只剩一两路，与多视角的目的正好相反
+    if (tw > W * MAX_TILE_FRAC && W >= minW * 2 + GRID_GAP) continue;
+    const th = (tw * 9) / 16;
+    if (th <= 0) break;
+
+    for (let rows = 1; rows <= rowsForAll(cols); rows++) {
+      const need = rows * th + GRID_GAP * (rows - 1);
+      if (need > maxH) break;
+      const d = Math.abs(need - target);
+      const cand = make(cols, rows, tw);
+      // 贴合度相当（1px 内）时选格子多的：同样的高度当然是多露几路更好
+      if (d < bestD - 1 || (Math.abs(d - bestD) <= 1 && best !== null && cand.visible > best.visible)) {
+        best = cand;
+        bestD = d;
+      }
+    }
   }
-  return make(cols, bestRows, tw);
+
+  // 容器矮到一行都放不下：仍按铺满 + 16:9 给一行，超出的部分交给 overflow 裁掉。
+  // 为塞进高度而缩窄格子会横向留白，缩高度则把画面压变形 —— 两者都比「被裁掉一截」难看。
+  if (!best) return make(2, 1, (W - GRID_GAP) / 2);
+  return best;
 }
 
 /**
