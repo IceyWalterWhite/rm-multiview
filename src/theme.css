@@ -431,11 +431,10 @@ html { scroll-snap-type: y proximity; }
 /* 可投票时，半边人气条本身就是按钮 —— 按下即有反应（不等 click），不额外占位 */
 /* z-index 不能省：轨道是 .cheer__head 的后继兄弟，不抬起来的话下面那条延伸出去的
    命中区会被轨道自己接走（点在色条上反而投不出票） */
-.cheer__team--vote { position:relative; z-index:1; cursor:pointer; color:inherit; font:inherit; text-align:inherit; border:0; border-radius:.5rem; background:transparent; padding:.15rem .3rem; margin:-.15rem -.3rem; transition:background-color 150ms ease; }
+/* 悬停/点击都不带任何底色与动画（用户点名）；唯一的悬停反馈是跟随光标的「点击投票」小字 */
+.cheer__team--vote { position:relative; z-index:1; cursor:pointer; color:inherit; font:inherit; text-align:inherit; border:0; border-radius:.5rem; background:transparent; padding:.15rem .3rem; margin:-.15rem -.3rem; }
 /* 命中区向下延过 gap 与轨道：轨道只有 6px，靠它自己接不住手指 */
 .cheer__team--vote::after { content:''; position:absolute; inset:0 0 -.7rem; }
-.cheer__team--red.cheer__team--vote:hover { background:rgba(255,59,78,.16); }
-.cheer__team--blue.cheer__team--vote:hover { background:rgba(59,130,246,.18); }
 /* 点击投票刻意不做任何按压/缩放动画（用户点名）；反馈全靠票数侧的 +N 气泡 */
 .cheer__cursor-tip { position:fixed; left:0; top:0; z-index:60; padding:2px 7px; font-size:.6875rem; line-height:1.5; white-space:nowrap; color:var(--ink); background:rgba(10,12,16,.92); border:1px solid rgba(255,255,255,.14); border-radius:999px; pointer-events:none; opacity:0; }
 .cheer__cursor-tip.is-on { opacity:1; }
