@@ -469,3 +469,77 @@ html { scroll-snap-type: y proximity; }
 .sandbox-status b.blue { color:var(--blue); }
 .sandbox-status .dim { opacity:.55; }
 .sandbox-status .warn { color:var(--accent); }
+
+/* ---- 战略目标血条：钉在各自的基地/前哨正上方 ---- */
+.ob { position:absolute; left:0; top:0; width:0; height:0; z-index:7; pointer-events:none; }
+.ob--red { color:var(--red); }
+.ob--blue { color:var(--blue); }
+.ob__box { position:absolute; left:0; bottom:11px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px 6px 3px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(10,13,18,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.ob__num { font-size:.6875rem; font-weight:700; line-height:1.2; letter-spacing:.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
+.ob__track { width:3.25rem; height:4px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); }
+.ob__fill { display:block; height:100%; background:currentColor; transition:width .4s cubic-bezier(.2,0,0,1); }
+/* 引线：血条浮在建筑顶上，得看得出它属于下面哪一座 */
+.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:11px; background:linear-gradient(to top, transparent, currentColor); }
+.ob.is-unknown { opacity:.4; }
+.ob.is-dead .ob__num { color:var(--text-secondary); }
+
+/* ---- 机器人面板：屏幕空间浮层，锚点由 JS 每帧写 transform ---- */
+/* 根节点就是机器人所在的那一点。卡片相对它偏移，引线连着两者 —— 于是不管
+   机器人动到哪，"面板 + 引线 + 锚点"始终是一个刚体，永远不会脱节 */
+.rp { position:absolute; left:0; top:0; width:0; height:0; z-index:8; pointer-events:none; }
+.rp__dot { position:absolute; left:-3.5px; top:-3.5px; width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 0 2px rgba(8,10,14,.6); }
+.rp__stem { position:absolute; left:-1px; bottom:2px; width:2px; height:16px; background:linear-gradient(to top, currentColor, rgba(255,255,255,.25)); }
+.rp--red { color:var(--red); }
+.rp--blue { color:var(--blue); }
+.rp__slot { position:absolute; left:0; bottom:18px; transform:translateX(calc(-50% + var(--rp-shift, 0px))); }
+.rp.is-below .rp__slot { bottom:auto; top:18px; }
+.rp.is-below .rp__stem { bottom:auto; top:2px; background:linear-gradient(to bottom, currentColor, rgba(255,255,255,.25)); }
+
+/* 大浮层读起来要"厚"：真磨砂 + 深阴影，它盖着的是会动的画面 */
+.rp__card { width:10.75rem; display:flex; flex-direction:column; gap:.35rem; padding:.45rem .5rem; border:1px solid rgba(255,255,255,.14); border-radius:.625rem; background:rgba(20,24,31,.92); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:0 14px 34px rgba(0,0,0,.55); color:var(--ink); pointer-events:auto; transform-origin:bottom center; animation:rp-in .3s cubic-bezier(.2,0,0,1); }
+.rp.is-below .rp__card { transform-origin:top center; }
+@keyframes rp-in { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:none; } }
+
+.rp__head { display:flex; align-items:center; gap:.35rem; }
+.rp__name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8125rem; font-weight:600; line-height:1.4; }
+.rp__pin { flex:none; display:flex; align-items:center; justify-content:center; width:1.5rem; height:1.5rem; padding:0; border:1px solid var(--line-strong); border-radius:.375rem; background:rgba(255,255,255,.06); color:var(--ink); cursor:pointer; transition:transform 100ms ease-out, border-color 150ms ease, background-color 150ms ease; }
+.rp__pin:hover { border-color:var(--accent); color:var(--accent); }
+.rp__pin:active { transform:scale(.94); }
+/* 置灰但仍可点：两种"点不动"的原因不一样，得让它有机会说出是哪一种 */
+.rp__pin.is-off { opacity:.4; cursor:default; }
+.rp__pin.is-off:hover { border-color:var(--line-strong); color:var(--ink); }
+.rp__pin.is-off:active { transform:none; }
+
+.rp__hp { display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:.35rem; font-size:.75rem; line-height:1.45; }
+.rp__hp-label { color:var(--text-secondary); }
+.rp__hp-value { font-weight:700; font-variant-numeric:tabular-nums; }
+.rp__hp.is-dead .rp__hp-value { color:var(--text-secondary); font-weight:600; }
+.rp__hp-bar { height:3px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.12); }
+/* 队色写死而非 currentColor：卡片自身把 color 设成了 --ink，
+   继承下来的话血条会是白的（引线与锚点在卡片外，仍走 currentColor） */
+.rp__hp-fill { display:block; height:100%; transition:width .3s cubic-bezier(.2,0,0,1); }
+.rp--red .rp__hp-fill { background:var(--red); }
+.rp--blue .rp__hp-fill { background:var(--blue); }
+
+.rp__preview { position:relative; display:flex; align-items:center; justify-content:center; aspect-ratio:16/9; border-radius:.375rem; overflow:hidden; background:#05070a; }
+.rp__preview canvas { display:block; width:100%; height:100%; object-fit:cover; }
+.rp__preview-note, .rp__preview--pinned { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; color:var(--text-secondary); }
+.rp__preview--pinned { position:static; color:var(--accent); font-weight:600; }
+.rp__hint { margin:0; font-size:.6875rem; line-height:1.45; color:var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 开合改纯淡入：位置跟随本来就没有过渡，剩下的只有这一处会动 */
+  .rp__card { animation:rp-fade .18s ease; }
+  @keyframes rp-fade { from { opacity:0; } to { opacity:1; } }
+  .rp__hp-fill, .ob__fill { transition:none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .rp__card { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
+  .ob__box { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(10,13,18,.95); }
+}
+@media (prefers-contrast: more) {
+  .rp__card { background:rgba(6,8,12,.98); border-color:var(--line-strong); }
+}
+@media (pointer: coarse) {
+  .rp__pin { width:2.125rem; height:2.125rem; }
+}

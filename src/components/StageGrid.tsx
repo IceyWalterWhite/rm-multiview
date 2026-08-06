@@ -29,8 +29,11 @@ interface Props {
   syncEngine?: SyncEngine;
   /** 左侧主视角区（含其下的控制栏） */
   mainSlot: ReactNode;
-  /** 右下沙盘 */
-  sandboxSlot: ReactNode;
+  /**
+   * 右下沙盘。参数是**当前排在网格里的那几路** —— 沙盘要靠它判断某台机器人
+   * 「已固定」。可见路数是这里现算出来的，不外泄成 state（那就又多一份会过期的副本）。
+   */
+  sandboxSlot: (shown: readonly string[]) => ReactNode;
 }
 
 interface DragState {
@@ -44,6 +47,23 @@ interface DragState {
   x: number;
   y: number;
   moved: boolean;
+}
+
+/**
+ * 拖横条时用的排布：沿用静止态的列数与格子尺寸，只把行数补到装得下全部十格。
+ *
+ * 机位按满列渲染、沙盘浮起来盖住下部 —— 边界移动时格子是被盖住，
+ * 而不是先一步凭空消失。
+ */
+function fillRows(rest: GridPlan, containerH: number): GridPlan {
+  const fit = Math.floor((containerH + GRID_GAP) / (rest.th + GRID_GAP));
+  const rows = Math.max(1, Math.min(Math.ceil(GRID_TOTAL / rest.cols), fit));
+  return {
+    ...rest,
+    rows,
+    need: rows * rest.th + GRID_GAP * (rows - 1),
+    visible: Math.min(rest.cols * rows, GRID_TOTAL),
+  };
 }
 
 /** 第 index 格在机位区里的落位（相对机位区左上角） */
@@ -99,19 +119,7 @@ export function StageGrid({
     ? (lock ? planFor(rc.w, rc.h, lock.cols, lock.rows) : solve(rc.w, rc.h, rc.h * topFrac))
     : solve(320, 480, 480 * 0.62);
 
-  // 拖横条中：沿用静止态的列数与格子尺寸，只把行数补到能放下全部十格。
-  // 机位按满列渲染、沙盘浮起来盖住下部 —— 边界移动时格子是被盖住，不会先一步凭空消失。
-  let plan = rest;
-  if (dragFrac !== null && !snapping) {
-    const fit = Math.floor((rc.h + GRID_GAP) / (rest.th + GRID_GAP));
-    const rowsFill = Math.max(1, Math.min(Math.ceil(GRID_TOTAL / rest.cols), fit));
-    plan = {
-      ...rest,
-      rows: rowsFill,
-      need: rowsFill * rest.th + GRID_GAP * (rowsFill - 1),
-      visible: Math.min(rest.cols * rowsFill, GRID_TOTAL),
-    };
-  }
+  const plan: GridPlan = dragFrac !== null && !snapping ? fillRows(rest, rc.h) : rest;
   const areaH = plan.need;
   const cursorH = dragFrac !== null ? rc.h * dragFrac : null;
   const reduced = prefersReducedMotion();
@@ -330,7 +338,10 @@ export function StageGrid({
           >
             <span aria-hidden="true" />
           </div>
-          <div className="sg-sandbox">{sandboxSlot}</div>
+          {/* shown 的引用稳定性交给 React Compiler：它按 order 与 plan.visible 记忆
+              这个 slice，可见集合没变时沙盘不会被拖着重渲。手写 useMemo 反而会让
+              编译器放弃优化整个组件（order 是 prop 数组，它不敢假定不被改） */}
+          <div className="sg-sandbox">{sandboxSlot(shown)}</div>
         </div>
 
         {/* 排不进网格的路：照常挂着解码，只是不给人看。

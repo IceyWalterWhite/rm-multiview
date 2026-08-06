@@ -14,7 +14,7 @@ import { SyncEngine } from '../sync/engine';
 import { AudioCalibrator, createAdtsDecoder } from '../sync/audioCalib';
 import { demuxAudio } from '../sync/tsDemux';
 import { parseFragName } from '../sync/nameClock';
-import { reconcile } from '../stage/viewOrder';
+import { reconcile, swap } from '../stage/viewOrder';
 
 const SYNC_PREF_KEY = 'rm.timecodeSync';
 const TRIM_KEY = 'rm.sync.trim';
@@ -74,6 +74,19 @@ export function LiveStage(p: Props) {
   const [userOrder, setUserOrder] = useState<string[]>([]);
   const order = useMemo(() => reconcile(userOrder, roster), [userOrder, roster]);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // 「固定到上方」：把沙盘点到的那一路与用户选中的格子对调。
+  // 换完就清掉选中 —— 那一格已经被这次替换消费了，留着会让下一次替换换到
+  // 一个已经不在原位的目标上（选中存的是路，不是格位）。
+  const pinToGrid = useCallback((viewId: string) => {
+    setUserOrder((cur) => {
+      const list = reconcile(cur, roster);
+      const a = list.indexOf(viewId);
+      const b = selected ? list.indexOf(selected) : -1;
+      return a === -1 || b === -1 ? cur : swap(list, a, b);
+    });
+    setSelected(null);
+  }, [roster, selected]);
 
   // 时码同步引擎：单例、引用稳定（memo 安全）；开关默认开，偏好入 localStorage
   // useState 的惰性初始化而非 useRef 懒建：同样只构造一次、引用同样稳定，
@@ -221,11 +234,11 @@ export function LiveStage(p: Props) {
           onSignatureExpired={p.onSignatureExpired}
           syncEngine={syncEngine}
           mainSlot={<>{mainStage}{controls}</>}
-          sandboxSlot={
+          sandboxSlot={(shown) => (
             <Suspense fallback={<div className="sandbox"><div className="sandbox-cover">沙盘加载中…</div></div>}>
-              <SandboxMap catalog={p.catalog} />
+              <SandboxMap catalog={p.catalog} shownIds={shown} selected={selected} onPin={pinToGrid} />
             </Suspense>
-          }
+          )}
         />
       </section>
     );
