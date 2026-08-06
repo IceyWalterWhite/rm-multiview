@@ -5,7 +5,7 @@ import type { SyncEngine } from '../sync/engine';
 import { VideoPlayer } from './VideoPlayer';
 import { SyncBadge } from './SyncBadge';
 import { sourceForQuality } from '../data/streams';
-import { solve, snapPlan, planFor, GRID_GAP, GRID_TOTAL, type GridPlan } from '../stage/gridSolve';
+import { solve, snapPlan, planFor, GRID_GAP, GRID_TOTAL, MAX_AREA_FRAC, type GridPlan } from '../stage/gridSolve';
 import { move } from '../stage/viewOrder';
 import { prefersReducedMotion } from '../a11y';
 
@@ -144,7 +144,7 @@ export function StageGrid({
       if (which === 'x') {
         setLeftPct(Math.min(65, Math.max(35, ((ev.clientX - r.left) / r.width) * 100)));
       } else {
-        setDragFrac(Math.min(0.94, Math.max(0.04, (ev.clientY - r.top) / r.height)));
+        setDragFrac(Math.min(MAX_AREA_FRAC, Math.max(0.04, (ev.clientY - r.top) / r.height)));
       }
     };
     const onUp = (ev: PointerEvent) => {
@@ -158,7 +158,7 @@ export function StageGrid({
       }
       setAxis(null);
       const r = host.getBoundingClientRect();
-      const frac = Math.min(0.94, Math.max(0.04, (ev.clientY - r.top) / r.height));
+      const frac = Math.min(MAX_AREA_FRAC, Math.max(0.04, (ev.clientY - r.top) / r.height));
       const snapped = snapPlan(rc.w, rc.h, rc.h * frac);
       // 吸附不瞬移：机位区先按落点排布定下来，沙盘组继续绝对定位停在光标处，
       // 再用带回弹的缓动滑到边界，动画结束才回到文档流。

@@ -163,8 +163,53 @@ export function LiveStage(p: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [hasEnlarged, clear]); // 依赖布尔而非 stacks 本身：多路开关不必反复重绑监听
 
+  // 底栏挤不挤得下由实测决定，不猜阈值 —— 一行还是两行、有没有弹幕、
+  // 观看胶囊是「500 弹丸 · 8 分」还是「登录领弹丸」，都在改占位。
+  const ctlRowRef = useRef<HTMLDivElement>(null);
+  const hintW = useRef(0);
+  const [tightBar, setTightBar] = useState(false);
+  // 与 theme.css 的 740px 断点是同一个数：那条注释说明了为什么是它
+  const [narrowBar, setNarrowBar] = useState(
+    () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 740px)').matches,
+  );
+  useEffect(() => {
+    if (typeof matchMedia === 'undefined') return;
+    const mq = matchMedia('(max-width: 740px)');
+    const sync = () => setNarrowBar(mq.matches);
+    mq.addEventListener('change', sync);
+    sync();
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  useEffect(() => {
+    const el = ctlRowRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      // 写全时量一次文字宽并记住：收起之后它已不在 DOM 里，没法再量
+      const text = el.querySelector<HTMLElement>('.scroll-hint__text');
+      if (text) hintW.current = Math.max(hintW.current, text.getBoundingClientRect().width);
+      // 富余空间要按「各项实测宽度之和」倒推，不能用 scrollWidth：
+      // .controls__tail 带 margin-left:auto，富余全被它吃成外边距，
+      // scrollWidth 于是恒等于 clientWidth —— 那样一旦收起就再也展不开。
+      const kids = [...el.children] as HTMLElement[];
+      const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+      const used = kids.reduce((sum, k) => sum + k.getBoundingClientRect().width, 0)
+        + gap * Math.max(0, kids.length - 1);
+      const spare = el.clientWidth - used;
+      // 收起后要宽到「写全还有富余」才展开，12px 迟滞挡住临界处的反复横跳
+      setTightBar((cur) => (cur ? spare < hintW.current + 12 : el.scrollWidth > el.clientWidth + 1));
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => ro.disconnect();
+  }, [layout, p.danmakuEnabled]);
+
   // 主视角宽度 < 侧列宽度（窗口太窄到看不清）→ 盖「请在大屏幕上观看」遮罩
   // 同时从 CSS 读取 .side-column 的真实 gap，动态设 --side-col-w 使 5 个 16:9 机位精确填满行高
+  //
+  // 依赖 layout 不能省：切到沙盘布局时 .stage-row 整个被卸载，写在它 style 上的
+  // --side-col-w 随之丢失；切回来是**新的** DOM 节点，effect 不重跑就没人再设这个变量，
+  // 侧列退回 CSS 兜底宽度 —— 表现就是「切回经典布局后机位错位」。
   useEffect(() => {
     const row = rowRef.current;
     if (!row || typeof ResizeObserver === 'undefined') return;
@@ -184,7 +229,7 @@ export function LiveStage(p: Props) {
     ro.observe(row);
     check();
     return () => ro.disconnect();
-  }, []);
+  }, [layout]);
 
   const scrollToCommunity = (e: MouseEvent) => {
     e.preventDefault();
@@ -195,29 +240,42 @@ export function LiveStage(p: Props) {
     <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
   );
 
-  // 底栏两行：上行是「调一次就不再碰」的设置（各自收进单一入口）与状态，
-  // 下行是每条弹幕都要用的发送条。混成一行会让发送条被设置挤到很窄。
+  // B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排
+  const composer = p.danmakuEnabled ? (
+    <DanmakuComposer
+      profile={p.profile}
+      isComplete={p.isComplete}
+      onSend={p.onSend}
+      onEditIdentity={p.onEditIdentity}
+      leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
+    />
+  ) : null;
+
+  // 经典布局底栏占整幅宽度，一行放得下；沙盘布局的底栏只占左半边，
+  // 挤成一行会把发送条压到几个字宽，所以那边才分两行。
+  //
+  // 740px 以下经典布局也退回两行 —— 这是 main 上就有的断点（原先靠 flex-wrap +
+  // `.composer--bar{flex-basis:100%}` 实现）：再窄下去输入框会被压到 100px 以内，
+  // 与其放任 flex 自行换行，不如明确堆成两行。路标缩成 👇 只够买回 ~90px，救不了这一档。
+  const oneRow = layout === 'wings' && !narrowBar;
   const controls = (
     <div className="controls">
-      <div className="controls__row">
+      <div className="controls__row" ref={ctlRowRef}>
         <QualityMenu mainQuality={p.mainQuality} multiQuality={p.multiQuality} onMain={p.setMainQuality} onMulti={p.setMultiQuality} />
         <LayoutMenu value={layout} onChange={setLayout} />
+        {oneRow && composer}
         <div className="controls__tail">
           {p.watchTaskSlot}
-          {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容 */}
-          <a className="scroll-hint" href="#community" onClick={scrollToCommunity}>下滑查看社区工具👇</a>
+          {/* 第二屏路标：没有它，恰好占满一屏的首屏看不出下面还有内容。
+              挤不下就只留 👇 —— 路标可以变短，发送条不能被挤没 */}
+          <a className="scroll-hint" href="#community" onClick={scrollToCommunity} title="下滑查看社区工具">
+            {!tightBar && <span className="scroll-hint__text">下滑查看社区工具</span>}
+            <span aria-hidden="true">👇</span>
+            {tightBar && <span className="sr-only">下滑查看社区工具</span>}
+          </a>
         </div>
       </div>
-      {/* B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排 */}
-      {p.danmakuEnabled && (
-        <DanmakuComposer
-          profile={p.profile}
-          isComplete={p.isComplete}
-          onSend={p.onSend}
-          onEditIdentity={p.onEditIdentity}
-          leading={<button className={`dm-toggle${danmakuOn ? ' active' : ''}`} onClick={() => setDanmakuOn((v) => !v)} aria-pressed={danmakuOn} title={danmakuOn ? '关闭弹幕' : '开启弹幕'}>弹幕</button>}
-        />
-      )}
+      {!oneRow && composer}
     </div>
   );
 

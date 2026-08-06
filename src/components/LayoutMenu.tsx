@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 export type StageLayout = 'wings' | 'grid';
 
 const LABELS: Record<StageLayout, string> = {
-  wings: '两翼',
-  grid: '主视角 + 网格 · 沙盘',
+  wings: '经典布局',
+  grid: '沙盘布局',
 };
 
 /**

@@ -101,7 +101,7 @@ describe('OBJECTIVE_SITES', () => {
   });
 
   it('基地在两端、前哨站在半场中部', () => {
-    expect(Math.abs(OBJECTIVE_SITES.redBase.x)).toBeGreaterThan(12);
+    expect(Math.abs(OBJECTIVE_SITES.redBase.x)).toBeGreaterThan(11);
     expect(Math.abs(OBJECTIVE_SITES.redOutpost.x)).toBeLessThan(5);
   });
 

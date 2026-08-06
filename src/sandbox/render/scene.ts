@@ -47,8 +47,11 @@ export interface SandboxScene {
   /** 机器人 id → 画布坐标。没定位/被褪掉/在相机背后时 null。 */
   screenPosOf(id: string): ScreenPoint | null;
   /**
-   * 场地米制坐标 + 离地高度 → 画布坐标。把血条钉在基地/前哨这类**固定**地标上用。
-   * 地面高度按 (x,y) 缓存 —— 地标不会动，每帧重新射线求交是白费。
+   * 场地米制坐标 + 离**主行驶面**的高度 → 画布坐标。把血条钉在基地/前哨这类固定地标上用。
+   *
+   * 高度基准是那张平面，不是「该点的地形高度」：地标底下正好立着建筑，
+   * 往下打射线取到的是建筑自己的顶盖（基地约 1.2 m），而斜视相机下把点抬高
+   * 会让它在画面上向外漂 —— 血条于是飘到建筑外面去。见 ObjectiveBars 的注释。
    */
   projectField(x: number, y: number, height: number): ScreenPoint | null;
   /** 场地模型加载完成。失败时 reject，调用方据此显示降级文案。 */
@@ -209,6 +212,10 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
         bg.updateMatrixWorld(true);
         scene.add(bg);
         fieldRoot = bg;
+        // 开发期把场地根节点挂出来：地标坐标（基地/前哨站在哪、多高）只能从
+        // **我们真正渲染的这份模型**上量，节点名在瘦身管线里已被剥光，离线解不出来。
+        // 生产构建里这行被 DCE。
+        if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__rmField = bg;
         // 场地就位后立刻把已有机器人的高度校正一次，免得它们悬在兜底平面上
         for (const r of robots.values()) {
           const g2 = groundAt(r.sx.v, r.sy.v);
@@ -398,8 +405,6 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
 
   // ---------- 屏幕空间：拾取与面板定位 ----------
   const _p = new THREE.Vector3();
-  /** 固定地标的地面高度缓存。key = "x,y"，只在场地已加载时写入 */
-  const siteFloor = new Map<string, number>();
 
   /** NDC → 画布 CSS 像素。在相机背后返回 null（否则会投出一个镜像的鬼影） */
   function toScreen(): ScreenPoint | null {
@@ -528,14 +533,10 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     },
     projectField(x, y, height) {
       if (viewW <= 0 || viewH <= 0) return null;
-      const key = `${x},${y}`;
-      let floor = siteFloor.get(key);
-      if (floor === undefined) {
-        floor = groundAt(x, y).h;
-        // 场地没加载完时 groundAt 给的是兜底平面，缓存下来就永远错了
-        if (fieldRoot) siteFloor.set(key, floor);
-      }
-      _p.set(x, floor + height, -y);
+      // 高度从主行驶面起算，不问 groundAt —— 它往下打射线取到的是**该点最高的那个面**，
+      // 而地标底下正好立着建筑，取回来的是建筑顶盖（基地约 1.2 m）。斜视相机下
+      // 那个高度会把投影向画面外侧推（实测基地处 20 px），血条就飘到建筑外面去了。
+      _p.set(x, FLOOR + height, -y);
       return toScreen();
     },
     resize(width, height) {

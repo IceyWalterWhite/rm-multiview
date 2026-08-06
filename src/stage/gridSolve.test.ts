@@ -206,3 +206,23 @@ describe('planFor', () => {
     expect(p.rows).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('沙盘的地板', () => {
+  // 沙盘是这套布局的另一半，不能被机位区压成一条缝。要求：任何容器尺寸、
+  // 任何期望高度下，下半区都还剩至少四分之一 —— 含分隔条。
+  it('机位区永远给下半区留出至少 1/4 容器高', () => {
+    for (const H of [420, 560, 720, 880, 1040, 1400]) {
+      for (const frac of [0.3, 0.6, 0.8, 0.95, 1.4]) {
+        const plan = solve(900, H, H * frac);
+        expect(plan.need, `H=${H} frac=${frac}`).toBeLessThanOrEqual(H * 0.75);
+      }
+    }
+  });
+
+  it('松手吸附与竖条重算同样守这条地板', () => {
+    for (const H of [520, 880, 1200]) {
+      expect(snapPlan(900, H, H).need).toBeLessThanOrEqual(H * 0.75);
+      expect(planFor(900, H, 2, 5).need).toBeLessThanOrEqual(H * 0.75);
+    }
+  });
+});

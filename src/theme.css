@@ -88,9 +88,9 @@ html { scroll-snap-type: y proximity; }
    （十路除不尽列数时），不居中的话那一行会孤零零地贴在左边 */
 .sg-tiles { display:grid; gap:6px; overflow:hidden; min-height:0; align-content:start; justify-content:center; }
 
+/* 不挂红蓝色边条：wings 里侧列本身就是按阵营分的，边条是那套分栏的延续；
+   网格里十路混排，每格再镶一道彩边只是把画面切碎，阵营看机位名就够了 */
 .sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:transform .2s cubic-bezier(.2,0,0,1), box-shadow .15s ease, border-color .15s ease; }
-.sg-tile.red { border-left:3px solid var(--red); }
-.sg-tile.blue { border-right:3px solid var(--blue); }
 .sg-tile:hover { box-shadow:0 0 0 1px var(--line-strong); }
 .sg-tile:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
 /* 选中 = 待替换的落点，要一眼看得出来，所以用 accent 描边而非淡淡的高亮 */
@@ -231,7 +231,7 @@ html { scroll-snap-type: y proximity; }
 .send-btn:active { transform:translateY(1px); }
 .send-btn:disabled { opacity:.55; cursor:progress; transform:none; filter:none; }
 /* 第二屏路标：第一屏自成一体，没有它用户不知道下面还有内容 */
-.scroll-hint { margin-left:auto; color:var(--text-secondary); text-decoration:none; font-size:.75rem; padding:4px 8px; border-radius:6px; white-space:nowrap; }
+.scroll-hint { margin-left:auto; display:inline-flex; align-items:center; gap:.15rem; color:var(--text-secondary); text-decoration:none; font-size:.75rem; padding:4px 8px; border-radius:6px; white-space:nowrap; }
 .scroll-hint:hover { color:var(--accent); }
 .scroll-hint:active { transform:translateY(1px); }
 
@@ -388,10 +388,10 @@ html { scroll-snap-type: y proximity; }
   .composer--bar { min-width:min(240px, 100%); }
 }
 /* 740px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
-   第一行 清晰度药丸 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
-   order 只调视觉行序，DOM/Tab 顺序不变 */
+   第一行 设置菜单 + 观看胶囊 + 路标，第二行 发送条独占整行（输入框重新获得宽度）。
+   换行本身由 LiveStage 在同一个断点上把发送条挪出 .controls__row（那一行是 nowrap，
+   不能再靠 flex-basis:100% 自己折下去）；这里只管窄屏下的让位。 */
 @media (max-width: 740px) {
-  .composer--bar { flex-basis:100%; order:1; }
   .composer--bar .id-chip { max-width:9rem; } /* 长身份让位给输入框 */
 }
 
@@ -474,12 +474,12 @@ html { scroll-snap-type: y proximity; }
 .ob { position:absolute; left:0; top:0; width:0; height:0; z-index:7; pointer-events:none; }
 .ob--red { color:var(--red); }
 .ob--blue { color:var(--blue); }
-.ob__box { position:absolute; left:0; bottom:11px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px 6px 3px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(10,13,18,.72); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.ob__box { position:absolute; left:0; bottom:calc(20px * var(--ob-scale, 1)); transform:translateX(-50%) scale(var(--ob-scale, 1)); transform-origin:bottom center; display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px 6px 3px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:rgba(8,11,16,.92); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
 .ob__num { font-size:.6875rem; font-weight:700; line-height:1.2; letter-spacing:.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
 .ob__track { width:3.25rem; height:4px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); }
 .ob__fill { display:block; height:100%; background:currentColor; transition:width .4s cubic-bezier(.2,0,0,1); }
 /* 引线：血条浮在建筑顶上，得看得出它属于下面哪一座 */
-.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:11px; background:linear-gradient(to top, transparent, currentColor); }
+.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:calc(20px * var(--ob-scale, 1)); background:linear-gradient(to top, transparent, currentColor); }
 .ob.is-unknown { opacity:.4; }
 .ob.is-dead .ob__num { color:var(--text-secondary); }
 
