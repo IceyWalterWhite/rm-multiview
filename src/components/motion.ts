@@ -77,7 +77,9 @@ export function useSpringValue(target: number, response = 0.4, damping = 1): num
   }, [target, response, damping, staticMode]);
 
   useEffect(() => () => {
-    if (raf.current !== null) cancelAnimationFrame(raf.current);
+    // 取消后必须归还 id：StrictMode 的模拟卸载会走到这里，若留着旧 id，
+    // 二次挂载的 effect 会误判「循环在飞」而拒绝重启，数字从此冻死
+    if (raf.current !== null) { cancelAnimationFrame(raf.current); raf.current = null; }
   }, []);
 
   return staticMode ? target : shown;

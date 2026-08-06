@@ -97,17 +97,30 @@ describe('CheerBar', () => {
     expect(container.querySelector('.cheer__vs')?.tagName).toBe('SPAN');
   });
 
-  it('keeps the vote buttons out of the DOM while voting is unavailable', () => {
-    render(<CheerBar {...base} canVote={false} />);
-    expect(screen.queryByRole('button', { name: `为${RED}助威` })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: `为${BLUE}助威` })).not.toBeInTheDocument();
+  it('stays completely inert while voting is unavailable', () => {
+    const { container } = render(<CheerBar {...base} canVote={false} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(container.querySelector('.cheer__team--red')?.tagName).toBe('DIV');
   });
 
-  it('still wires the dormant vote buttons when canVote is forced on', async () => {
+  it('makes each half of the bar its own vote target instead of adding a pill', async () => {
     const onVote = vi.fn();
-    render(<CheerBar {...base} canVote onVote={onVote} />);
-    await userEvent.click(screen.getByRole('button', { name: `为${RED}助威` }));
+    const { container } = render(<CheerBar {...base} canVote onVote={onVote} />);
+    const red = screen.getByRole('button', { name: `为${RED}助威` });
+    // 点的就是这支队伍那半边本身（队名、票数都在按钮里），不是另立的一颗小按钮
+    expect(red).toHaveClass('cheer__team--red');
+    expect(red).toHaveTextContent(RED);
+    expect(container.querySelectorAll('button')).toHaveLength(2);
+
+    await userEvent.click(red);
     expect(onVote).toHaveBeenCalledWith('red');
+    await userEvent.click(screen.getByRole('button', { name: `为${BLUE}助威` }));
+    expect(onVote).toHaveBeenCalledWith('blue');
+  });
+
+  it('extends the vote hit area below the 6px track rather than growing the row', () => {
+    // 轨道只有 .375rem 高，靠它自己接不住手指；命中区必须往下延到轨道那一半
+    expect(themeCss).toMatch(/\.cheer__team--vote::after\s*\{[^}]*inset:0 0 -/);
   });
 
   it('surfaces the error message from the data layer', () => {

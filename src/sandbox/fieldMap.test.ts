@@ -4,6 +4,8 @@ import {
   MINIMAP_SPAN_X,
   MINIMAP_U0,
   MINIMAP_V0,
+  OBJECTIVE_MAX_HP,
+  OBJECTIVE_SITES,
   headingToYaw,
   insideField,
   minimapToField,
@@ -76,5 +78,34 @@ describe('insideField', () => {
     expect(insideField(13.9, 1.6)).toBe(true);
     expect(insideField(14.5, 1.6)).toBe(false); // 木质底板上但已出比赛场地
     expect(insideField(0, 10)).toBe(false);
+  });
+});
+
+describe('OBJECTIVE_SITES', () => {
+  it('四个目标都在比赛场地内', () => {
+    for (const [name, at] of Object.entries(OBJECTIVE_SITES)) {
+      expect(insideField(at.x, at.y), name).toBe(true);
+    }
+  });
+
+  // 场地是绕中心 (0, FIELD_CENTER_Y) 的 180° 旋转对称，红蓝同名设施必须互为对称点。
+  // 这条约束一破，血条就会钉在空地上 —— 而那在截图上看着仍然"像对的"。
+  it.each([
+    ['base', 'redBase', 'blueBase'],
+    ['outpost', 'redOutpost', 'blueOutpost'],
+  ] as const)('%s 红蓝互为 180° 对称点', (_kind, red, blue) => {
+    const r = OBJECTIVE_SITES[red];
+    const b = OBJECTIVE_SITES[blue];
+    expect(r.x + b.x).toBeCloseTo(0, 6);
+    expect((r.y + b.y) / 2).toBeCloseTo(FIELD_CENTER_Y, 6);
+  });
+
+  it('基地在两端、前哨站在半场中部', () => {
+    expect(Math.abs(OBJECTIVE_SITES.redBase.x)).toBeGreaterThan(11);
+    expect(Math.abs(OBJECTIVE_SITES.redOutpost.x)).toBeLessThan(5);
+  });
+
+  it('满血值照规则手册：基地 5000、前哨站 1500', () => {
+    expect(OBJECTIVE_MAX_HP).toEqual({ base: 5000, outpost: 1500 });
   });
 });

@@ -65,6 +65,79 @@ html { scroll-snap-type: y proximity; }
 .main-stage { flex:1; min-width:0; position:relative; z-index:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#000; }
 /* 太窄（主视角比侧列还小）时盖住所有视角的提示遮罩 */
 .stage-cover { position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:rgba(8,10,14,.94); color:var(--accent); font-size:1.25rem; font-weight:700; letter-spacing:2px; text-align:center; padding:20px; }
+
+/* ---- grid 布局：主视角 | 机位网格 + 沙盘 ---- */
+/* 与 wings 并列的第二套舞台。左右、上下各一条可拖分隔条，
+   排布由 stage/gridSolve 在渲染期现算——这里只负责把算出来的数落到盒子上。 */
+.stage-grid { display:flex; flex:1; min-height:0; gap:0; }
+.sg-main { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.sg-right { position:relative; flex:1; min-width:0; display:flex; flex-direction:column; }
+
+/* 分隔条：命中区比视觉宽，细线只是提示，别让用户去瞄准 2px */
+.sg-sep { flex:none; display:flex; align-items:center; justify-content:center; border-radius:5px; background:transparent; transition:background-color .15s ease; touch-action:none; }
+.sg-sep:hover { background:rgba(255,213,74,.10); }
+.sg-sep--col { width:10px; cursor:col-resize; }
+.sg-sep--col > span { width:2px; height:34px; border-radius:1px; background:var(--line-strong); }
+.sg-sep--row { height:10px; cursor:row-resize; }
+.sg-sep--row > span { height:2px; width:34px; border-radius:1px; background:var(--line-strong); }
+.sg-sep:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+
+/* 机位区高度恒等于整行高度，多出的行由 overflow 裁掉——
+   拖动时它们是被沙盘盖住/被容器切掉，不会先一步凭空消失。
+   justify-content:center 让整组格子居中：列宽虽然铺满，但最后一行可能不满
+   （十路除不尽列数时），不居中的话那一行会孤零零地贴在左边 */
+.sg-tiles { display:grid; gap:6px; overflow:hidden; min-height:0; align-content:start; justify-content:center; }
+
+/* 不挂红蓝色边条：wings 里侧列本身就是按阵营分的，边条是那套分栏的延续；
+   网格里十路混排，每格再镶一道彩边只是把画面切碎，阵营看机位名就够了 */
+.sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:transform .2s cubic-bezier(.2,0,0,1), box-shadow .15s ease, border-color .15s ease; }
+.sg-tile:hover { box-shadow:0 0 0 1px var(--line-strong); }
+.sg-tile:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
+/* 选中 = 待替换的落点，要一眼看得出来，所以用 accent 描边而非淡淡的高亮 */
+.sg-tile.selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+/* 拖动中的那一路脱手跟指针走：不吃过渡（1:1），并压在其余格子之上 */
+.sg-tile.dragging { z-index:20; cursor:grabbing; box-shadow:0 8px 32px rgba(0,0,0,.7); opacity:.92; }
+.sg-tile-video { width:100%; height:100%; object-fit:cover; display:block; }
+.sg-tile-name { position:absolute; left:6px; bottom:4px; font-size:.6875rem; color:var(--text-secondary); text-shadow:0 1px 3px rgba(0,0,0,.9); pointer-events:none; }
+
+/* 沙盘组：静止时在文档流里，拖横条时整组绝对定位跟手上滑并盖住下面几路机位 */
+.sg-lower { display:flex; flex-direction:column; flex:1; min-height:0; }
+.sg-sandbox { flex:1; min-height:0; display:flex; }
+
+/* 排不进网格的路：留在 DOM 里继续解码，供沙盘取像素与面板预览用。
+   不用 display:none —— 那会让浏览器把解码一并停掉，沙盘就瞎了几路。 */
+.sg-offscreen { position:absolute; left:0; bottom:0; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; z-index:-1; }
+
+/* ---- 底栏收纳式菜单（画质 / 布局）---- */
+/* 观赛屏不铺控件带：每样设置只在栏上占一个可点目标 + 一段状态文字，
+   设置本身收进弹出面板 */
+.ctl-menu { position:relative; display:inline-flex; flex:none; }
+.ctl-menu__btn { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 9px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--text); font-size:.8125rem; line-height:1; white-space:nowrap; cursor:pointer; transition:border-color .15s ease; }
+.ctl-menu__btn:hover { border-color:var(--accent); }
+.ctl-menu__cur { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
+.ctl-menu__caret { color:var(--text-secondary); font-size:.625rem; line-height:1; }
+/* 从触发它的按钮长出来（transform-origin 落在按钮那一侧），不是凭空淡入 */
+.ctl-menu__panel { position:absolute; bottom:calc(100% + 8px); left:0; z-index:40; width:236px; display:flex; flex-direction:column; gap:12px; padding:12px; border:1px solid var(--line-strong); border-radius:10px; background:rgba(28,32,38,.88); backdrop-filter:blur(20px) saturate(140%); -webkit-backdrop-filter:blur(20px) saturate(140%); box-shadow:0 14px 34px rgba(0,0,0,.6); transform-origin:bottom left; animation:pop-in .18s cubic-bezier(.2,0,0,1); }
+.ctl-menu__panel--layout { width:auto; gap:4px; padding:6px; }
+
+.ctl-field { display:flex; flex-direction:column; gap:6px; }
+.ctl-field__label { font-size:.75rem; color:var(--text-secondary); }
+/* 分段控件：三档并排在一个槽里，当前档实心 —— 比三个独立按钮更能表达「互斥」 */
+.seg { display:flex; gap:2px; padding:2px; background:#0f141c; border:1px solid var(--line); border-radius:7px; }
+.seg__opt { flex:1; padding:5px 0; border:none; border-radius:5px; background:transparent; color:var(--text-secondary); font-size:.75rem; line-height:1; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.seg__opt:hover { color:var(--text); }
+.seg__opt.active { background:var(--accent); color:#111; font-weight:700; }
+
+.layout-opt { display:flex; align-items:center; gap:10px; padding:7px 12px 7px 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--text-secondary); font-size:.8125rem; white-space:nowrap; cursor:pointer; transition:background-color .15s ease, color .15s ease; }
+.layout-opt:hover { background:rgba(255,255,255,.06); color:var(--text); }
+.layout-opt.active { color:var(--accent); border-color:var(--line-strong); }
+
+@keyframes pop-in { from { opacity:0; transform:scale(.96) translateY(6px); } to { opacity:1; transform:none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-tile { transition:none; }
+  .ctl-menu__panel { animation:none; }
+}
 /* 无直播：第一屏遮罩占满首屏（height:100vh），第二屏照常在下方，可下滚查看 */
 .offline-stage { align-items:center; justify-content:center; }
 .offline-title { color:var(--accent); font-size:1.375rem; font-weight:700; letter-spacing:2px; text-align:center; padding:20px 20px 8px; }
@@ -88,7 +161,11 @@ html { scroll-snap-type: y proximity; }
 .match-title__seg { flex:none; padding-right:36px; }
 @keyframes match-title-marquee { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 
-.controls { display:flex; gap:10px; align-items:center; flex:none; flex-wrap:wrap; }
+/* 两行：上行设置与状态，下行发送条。混成一行的话发送条会被设置挤到很窄 */
+.controls { display:flex; flex-direction:column; gap:8px; flex:none; min-width:0; }
+.controls__row { display:flex; gap:10px; align-items:center; min-width:0; }
+/* 状态与路标推到最右：左边是「可点的设置」，右边是「看的信息」，两类不混排 */
+.controls__tail { margin-left:auto; display:flex; gap:10px; align-items:center; min-width:0; }
 .pill { background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:4px 9px; font-size:.8125rem; }
 .pill select { background:transparent; color:var(--accent); border:none; font-weight:700; }
 .pill option { background:var(--surface-2); color:var(--ink); } /* 防 UA 白底黄字（1.41:1） */
@@ -154,7 +231,7 @@ html { scroll-snap-type: y proximity; }
 .send-btn:active { transform:translateY(1px); }
 .send-btn:disabled { opacity:.55; cursor:progress; transform:none; filter:none; }
 /* 第二屏路标：第一屏自成一体，没有它用户不知道下面还有内容 */
-.scroll-hint { margin-left:auto; color:var(--text-secondary); text-decoration:none; font-size:.75rem; padding:4px 8px; border-radius:6px; white-space:nowrap; }
+.scroll-hint { margin-left:auto; display:inline-flex; align-items:center; gap:.15rem; color:var(--text-secondary); text-decoration:none; font-size:.75rem; padding:4px 8px; border-radius:6px; white-space:nowrap; }
 .scroll-hint:hover { color:var(--accent); }
 .scroll-hint:active { transform:translateY(1px); }
 
@@ -163,7 +240,6 @@ html { scroll-snap-type: y proximity; }
 .watch-capsule { display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap; cursor:pointer; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:.2rem .6rem; font-size:.8125rem; line-height:1.45; letter-spacing:.01em; text-decoration:none; transition:transform 100ms ease-out, border-color 150ms ease; }
 .watch-capsule:hover { border-color:var(--accent); }
 .watch-capsule:active { transform:scale(.97); }
-.watch-capsule--install { color:var(--accent); }
 .watch-capsule__count, .watch-tier__gain { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
 .watch-capsule__unit, .watch-capsule__time, .watch-capsule__sep { color:var(--text-secondary); }
 .pellet-dot { width:.55rem; height:.55rem; flex:none; border-radius:50%; background:radial-gradient(circle at 32% 30%, #fff2c2, #d9a521 72%); box-shadow:0 0 5px rgba(255,213,74,.4); }
@@ -171,7 +247,9 @@ html { scroll-snap-type: y proximity; }
 .watch-dialog[open] { opacity:1; transform:none; }
 @starting-style { .watch-dialog[open] { opacity:0; transform:scale(.94) translateY(6px); } }
 .watch-dialog::backdrop { background:rgba(0,0,0,.22); }
-.watch-panel { width:min(19rem, calc(100vw - 2rem)); display:flex; flex-direction:column; gap:.5rem; padding:.875rem; border:1px solid rgba(255,255,255,.12); border-radius:.875rem; background:rgba(24,28,35,.94); box-shadow:0 20px 50px rgba(0,0,0,.6); }
+/* 面板正好落在人气条上方：那 6% 的透光率会把亮黄票数透成可读的重影，
+   所以这块玻璃必须真的磨砂（blur），而不只是"接近不透明" */
+.watch-panel { width:min(19rem, calc(100vw - 2rem)); display:flex; flex-direction:column; gap:.5rem; padding:.875rem; border:1px solid rgba(255,255,255,.12); border-radius:.875rem; background:rgba(24,28,35,.94); -webkit-backdrop-filter:blur(20px) saturate(160%); backdrop-filter:blur(20px) saturate(160%); box-shadow:0 20px 50px rgba(0,0,0,.6); }
 .watch-panel__title, .watch-panel__sum, .watch-panel__note { margin:0; }
 .watch-panel__title { color:var(--ink); font-size:1rem; }
 .watch-panel__sum, .watch-panel__note, .watch-tier { color:var(--text-secondary); font-size:.8125rem; line-height:1.5; }
@@ -182,6 +260,13 @@ html { scroll-snap-type: y proximity; }
 .watch-tier__bar { position:absolute; right:0; bottom:.15rem; left:1.45rem; height:2px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.08); }
 .watch-tier__bar-fill { display:block; height:100%; background:var(--accent); }
 .watch-panel__note a { color:var(--accent); }
+.watch-panel__note b { color:var(--ink); font-weight:600; }
+/* 面板里的行动项：主行动（安装）实心，次行动（登录）描边 —— 一屏里只有一个最亮的东西 */
+.watch-action { display:flex; align-items:center; justify-content:center; min-height:2rem; padding:.25rem .75rem; border:1px solid transparent; border-radius:.5rem; background:var(--accent); color:#1a1a1a; font-size:.8125rem; font-weight:700; line-height:1.45; text-decoration:none; transition:transform 100ms ease-out, filter 150ms ease, border-color 150ms ease; }
+.watch-action:hover { color:#1a1a1a; filter:brightness(1.08); }
+.watch-action:active { transform:scale(.98); }
+.watch-action--ghost { background:transparent; border-color:var(--line-strong); color:var(--ink); font-weight:600; }
+.watch-action--ghost:hover { color:var(--accent); border-color:var(--accent); filter:none; }
 
 /* 底部留 34px 给备案号条（绝对定位其内），两屏总高保持 2×100dvh 不变 */
 .chat-section { position:relative; height:100vh; height:100dvh; display:flex; gap:10px; padding:14px 14px 34px; }
@@ -293,6 +378,7 @@ html { scroll-snap-type: y proximity; }
   .id-editor-dialog::backdrop { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.7); }
   .sync-panel { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
   .sync-badge { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
+  .watch-panel { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
 }
 
 /* 窄窗口控制栏渐进收纳：固定项合计 ~744px（清晰度 pill 246 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
@@ -302,10 +388,10 @@ html { scroll-snap-type: y proximity; }
   .composer--bar { min-width:min(240px, 100%); }
 }
 /* 740px 之下：单行时输入框会被压到 100px 以内，不再让 flex 自行换行出事故，明确设计成两行——
-   第一行 清晰度药丸 + 路标(靠右)，第二行 发送条独占整行（输入框重新获得宽度）。
-   order 只调视觉行序，DOM/Tab 顺序不变 */
+   第一行 设置菜单 + 观看胶囊 + 路标，第二行 发送条独占整行（输入框重新获得宽度）。
+   换行本身由 LiveStage 在同一个断点上把发送条挪出 .controls__row（那一行是 nowrap，
+   不能再靠 flex-basis:100% 自己折下去）；这里只管窄屏下的让位。 */
 @media (max-width: 740px) {
-  .composer--bar { flex-basis:100%; order:1; }
   .composer--bar .id-chip { max-width:9rem; } /* 长身份让位给输入框 */
 }
 
@@ -342,12 +428,16 @@ html { scroll-snap-type: y proximity; }
 .cheer__vs:hover { transform:scale(1.12); }
 .cheer__vs.is-pulse { animation:cheer-vs-pulse 500ms cubic-bezier(.2,0,0,1); }
 @keyframes cheer-vs-pulse { 0% { transform:scale(1); } 40% { transform:scale(1.16); } 100% { transform:scale(1); } }
-.cheer-vote { flex:none; cursor:pointer; border:1px solid; border-radius:999px; background:rgba(255,255,255,.06); padding:.1rem .6rem; font-size:clamp(.6875rem, 1.2vw, .8125rem); line-height:1.45; font-weight:700; letter-spacing:.02em; transition:transform 100ms ease-out, background-color 150ms ease, border-color 150ms ease; }
-.cheer-vote--red { color:#ff8a94; border-color:rgba(255,59,78,.5); }
-.cheer-vote--red:hover { background:rgba(255,59,78,.18); border-color:#ff8a94; }
-.cheer-vote--blue { color:#8fbcff; border-color:rgba(59,130,246,.5); }
-.cheer-vote--blue:hover { background:rgba(59,130,246,.2); border-color:#8fbcff; }
-.cheer-vote:active { transform:scale(.97); }
+/* 可投票时，半边人气条本身就是按钮 —— 按下即有反应（不等 click），不额外占位 */
+/* z-index 不能省：轨道是 .cheer__head 的后继兄弟，不抬起来的话下面那条延伸出去的
+   命中区会被轨道自己接走（点在色条上反而投不出票） */
+/* 悬停/点击都不带任何底色与动画（用户点名）；唯一的悬停反馈是跟随光标的「点击投票」小字 */
+.cheer__team--vote { position:relative; z-index:1; cursor:pointer; color:inherit; font:inherit; text-align:inherit; border:0; border-radius:.5rem; background:transparent; padding:.15rem .3rem; margin:-.15rem -.3rem; }
+/* 命中区向下延过 gap 与轨道：轨道只有 6px，靠它自己接不住手指 */
+.cheer__team--vote::after { content:''; position:absolute; inset:0 0 -.7rem; }
+/* 点击投票刻意不做任何按压/缩放动画（用户点名）；反馈全靠票数侧的 +N 气泡 */
+.cheer__cursor-tip { position:fixed; left:0; top:0; z-index:60; padding:2px 7px; font-size:.6875rem; line-height:1.5; white-space:nowrap; color:var(--ink); background:rgba(10,12,16,.92); border:1px solid rgba(255,255,255,.14); border-radius:999px; pointer-events:none; opacity:0; }
+.cheer__cursor-tip.is-on { opacity:1; }
 
 @media (prefers-reduced-motion: reduce) {
   .cheer__fill { transition:width .2s linear; }
@@ -359,11 +449,12 @@ html { scroll-snap-type: y proximity; }
 @media (prefers-contrast: more) {
   .cheer { background:rgba(8,10,14,.97); }
   .cheer__track { outline:1px solid var(--line-strong); }
-  .cheer-vote { background:rgba(0,0,0,.65); border-width:2px; }
+  .cheer__team--vote { outline:1px solid var(--line-strong); }
 }
 
+/* 触屏：命中区再往外扩到 44px 级别，但不撑高这一行（它盖在画面上） */
 @media (pointer: coarse) {
-  .cheer-vote { min-height:44px; }
+  .cheer__team--vote::after { inset:-.55rem 0 -.95rem; }
 }
 
 /* ---- 实时沙盘 ---- */
@@ -379,3 +470,76 @@ html { scroll-snap-type: y proximity; }
 .sandbox-status b.blue { color:var(--blue); }
 .sandbox-status .dim { opacity:.55; }
 .sandbox-status .warn { color:var(--accent); }
+
+/* ---- 战略目标血条：钉在各自的基地/前哨正上方 ---- */
+.ob { position:absolute; left:0; top:0; width:0; height:0; z-index:7; pointer-events:none; }
+.ob--red { color:var(--red); }
+.ob--blue { color:var(--blue); }
+.ob__box { position:absolute; left:0; bottom:calc(16px * var(--ob-scale, 1)); transform:translateX(-50%) scale(var(--ob-scale, 1)); transform-origin:bottom center; display:flex; flex-direction:column; align-items:center; gap:1px; padding:1px 5px 2px; border:1px solid rgba(255,255,255,.12); border-radius:5px; background:#0b0e13; }
+.ob__num { font-size:.625rem; font-weight:700; line-height:1.2; letter-spacing:.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
+.ob__track { width:2.75rem; height:3px; border-radius:999px; overflow:hidden; background:#242a33; }
+.ob__fill { display:block; height:100%; background:currentColor; transition:width .4s cubic-bezier(.2,0,0,1); }
+/* 引线：血条浮在建筑顶上，得看得出它属于下面哪一座 */
+.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:calc(16px * var(--ob-scale, 1)); background:linear-gradient(to top, transparent, currentColor); }
+.ob.is-unknown { opacity:.4; }
+.ob.is-dead .ob__num { color:var(--text-secondary); }
+
+/* ---- 机器人面板：屏幕空间浮层，锚点由 JS 每帧写 transform ---- */
+/* 根节点就是机器人所在的那一点。卡片相对它偏移，引线连着两者 —— 于是不管
+   机器人动到哪，"面板 + 引线 + 锚点"始终是一个刚体，永远不会脱节 */
+.rp { position:absolute; left:0; top:0; width:0; height:0; z-index:8; pointer-events:none; }
+.rp__dot { position:absolute; left:-3.5px; top:-3.5px; width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 0 2px rgba(8,10,14,.6); }
+.rp__stem { position:absolute; left:-1px; bottom:2px; width:2px; height:16px; background:linear-gradient(to top, currentColor, rgba(255,255,255,.25)); }
+.rp--red { color:var(--red); }
+.rp--blue { color:var(--blue); }
+.rp__slot { position:absolute; left:0; bottom:18px; transform:translateX(calc(-50% + var(--rp-shift, 0px))); }
+.rp.is-below .rp__slot { bottom:auto; top:18px; }
+.rp.is-below .rp__stem { bottom:auto; top:2px; background:linear-gradient(to bottom, currentColor, rgba(255,255,255,.25)); }
+
+/* 大浮层读起来要"厚"：真磨砂 + 深阴影，它盖着的是会动的画面 */
+.rp__card { width:10.75rem; display:flex; flex-direction:column; gap:.35rem; padding:.45rem .5rem; border:1px solid rgba(255,255,255,.14); border-radius:.625rem; background:rgba(20,24,31,.92); -webkit-backdrop-filter:blur(18px) saturate(160%); backdrop-filter:blur(18px) saturate(160%); box-shadow:0 14px 34px rgba(0,0,0,.55); color:var(--ink); pointer-events:auto; transform-origin:bottom center; animation:rp-in .3s cubic-bezier(.2,0,0,1); }
+.rp.is-below .rp__card { transform-origin:top center; }
+@keyframes rp-in { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:none; } }
+
+.rp__head { display:flex; align-items:center; gap:.35rem; }
+.rp__name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8125rem; font-weight:600; line-height:1.4; }
+.rp__pin { flex:none; display:flex; align-items:center; justify-content:center; width:1.5rem; height:1.5rem; padding:0; border:1px solid var(--line-strong); border-radius:.375rem; background:rgba(255,255,255,.06); color:var(--ink); cursor:pointer; transition:transform 100ms ease-out, border-color 150ms ease, background-color 150ms ease; }
+.rp__pin:hover { border-color:var(--accent); color:var(--accent); }
+.rp__pin:active { transform:scale(.94); }
+/* 置灰但仍可点：两种"点不动"的原因不一样，得让它有机会说出是哪一种 */
+.rp__pin.is-off { opacity:.4; cursor:default; }
+.rp__pin.is-off:hover { border-color:var(--line-strong); color:var(--ink); }
+.rp__pin.is-off:active { transform:none; }
+
+.rp__hp { display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:.35rem; font-size:.75rem; line-height:1.45; }
+.rp__hp-label { color:var(--text-secondary); }
+.rp__hp-value { font-weight:700; font-variant-numeric:tabular-nums; }
+.rp__hp.is-dead .rp__hp-value { color:var(--text-secondary); font-weight:600; }
+.rp__hp-bar { height:3px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.12); }
+/* 队色写死而非 currentColor：卡片自身把 color 设成了 --ink，
+   继承下来的话血条会是白的（引线与锚点在卡片外，仍走 currentColor） */
+.rp__hp-fill { display:block; height:100%; transition:width .3s cubic-bezier(.2,0,0,1); }
+.rp--red .rp__hp-fill { background:var(--red); }
+.rp--blue .rp__hp-fill { background:var(--blue); }
+
+.rp__preview { position:relative; display:flex; align-items:center; justify-content:center; aspect-ratio:16/9; border-radius:.375rem; overflow:hidden; background:#05070a; }
+.rp__preview canvas { display:block; width:100%; height:100%; object-fit:cover; }
+.rp__preview-note, .rp__preview--pinned { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; color:var(--text-secondary); }
+.rp__preview--pinned { position:static; color:var(--accent); font-weight:600; }
+.rp__hint { margin:0; font-size:.6875rem; line-height:1.45; color:var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 开合改纯淡入：位置跟随本来就没有过渡，剩下的只有这一处会动 */
+  .rp__card { animation:rp-fade .18s ease; }
+  @keyframes rp-fade { from { opacity:0; } to { opacity:1; } }
+  .rp__hp-fill, .ob__fill { transition:none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .rp__card { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
+}
+@media (prefers-contrast: more) {
+  .rp__card { background:rgba(6,8,12,.98); border-color:var(--line-strong); }
+}
+@media (pointer: coarse) {
+  .rp__pin { width:2.125rem; height:2.125rem; }
+}

@@ -34,7 +34,7 @@ describe('formatWatchDuration', () => {
 });
 
 describe('WatchTaskCapsule', () => {
-  it('degrades to a login link when not logged in', () => {
+  it('degrades to a login link when the helper is ready and only the login is missing', () => {
     render(<WatchTaskCapsule {...base} loggedIn={false} />);
     const link = screen.getByRole('link', { name: /登录领弹丸/ });
     expect(link).toHaveAttribute('href', base.loginUrl);
@@ -43,16 +43,36 @@ describe('WatchTaskCapsule', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('offers one-click userscript installation when the bridge is missing', () => {
+  it('keeps one capsule only: without the script it expands instead of jumping to login', async () => {
     render(<WatchTaskCapsule {...base} loggedIn={false} bridgeStatus="missing" />);
+    // 顶层只有「登录领弹丸」这一颗，没有第二颗「一键安装直播助手」胶囊
+    expect(screen.queryByRole('link', { name: /一键安装直播助手/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /登录领弹丸/ }));
     expect(screen.getByRole('link', { name: /一键安装直播助手/ })).toHaveAttribute('href', base.installUrl);
-    expect(screen.queryByRole('link', { name: /登录领弹丸/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/登录 Cookie 全程不经过本站/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /登录 RoboMaster 账号/ })).toHaveAttribute('href', base.loginUrl);
   });
 
-  it('keeps an installation entry visible for a logged-in viewer when the bridge is missing', () => {
+  it('still expands while the probe is unresolved, so a script-less viewer sees the install path', async () => {
+    // 探测超时 8 秒，没装脚本的人整段时间都待在 probing —— 这时若按「跳登录」处理，
+    // 最该看到安装说明的人恰好看不到。
+    render(<WatchTaskCapsule {...base} loggedIn={false} bridgeStatus="probing" />);
+    await userEvent.click(screen.getByRole('button', { name: /登录领弹丸/ }));
+    expect(screen.getByText(/正在检测直播助手/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /一键安装直播助手/ })).toBeInTheDocument();
+  });
+
+  it('moves the installation entry into the panel for a logged-in viewer as well', async () => {
     render(<WatchTaskCapsule {...base} bridgeStatus="missing" />);
+    expect(screen.queryByRole('link', { name: /\u4e00\u952e\u5b89\u88c5\u76f4\u64ad\u52a9\u624b/ })).not.toBeInTheDocument();
+    const capsule = screen.getByRole('button');
+    expect(capsule).toHaveTextContent('15');
+
+    await userEvent.click(capsule);
     expect(screen.getByRole('link', { name: /\u4e00\u952e\u5b89\u88c5\u76f4\u64ad\u52a9\u624b/ })).toHaveAttribute('href', base.installUrl);
-    expect(screen.getByRole('button')).toHaveTextContent('15');
+    // \u5df2\u767b\u5f55\u5c31\u4e0d\u518d\u91cd\u590d\u63a8\u767b\u5f55\u5165\u53e3
+    expect(screen.queryByRole('link', { name: /\u767b\u5f55 RoboMaster \u8d26\u53f7/ })).not.toBeInTheDocument();
   });
 
   it('shows the earned pellets and accumulated time on the capsule', () => {
@@ -85,10 +105,11 @@ describe('WatchTaskCapsule', () => {
     expect(capsule).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('states that a missing script cannot accumulate time but keeps showing synced progress', async () => {
+  it('spells out the privacy boundary and the fallback when the script is missing', async () => {
     render(<WatchTaskCapsule {...base} bridgeStatus="missing" />);
     await userEvent.click(screen.getByRole('button', { name: /弹丸/ }));
-    expect(screen.getByText(/本站不能累计/)).toBeInTheDocument();
+    expect(screen.getByText(/登录 Cookie 全程不经过本站/)).toBeInTheDocument();
+    expect(screen.getByText(/不装也能看/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /一键安装直播助手/ })).toHaveAttribute('href', base.installUrl);
     expect(screen.getByRole('link', { name: /官网直播页/ })).toHaveAttribute('href', base.officialUrl);
   });

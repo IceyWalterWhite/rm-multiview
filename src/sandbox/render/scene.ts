@@ -26,14 +26,45 @@ const AIR_ALT = 2.3;
 /** 位置陈旧到这个程度就完全褪掉 —— 再画下去就是在骗人。 */
 const STALE_FADE_MS = 8_000;
 
+/** 画布内的 CSS 像素坐标 */
+export interface ScreenPoint {
+  x: number;
+  y: number;
+}
+
 export interface SandboxScene {
   update(robots: readonly SandboxRobot[]): void;
   resize(width: number, height: number): void;
   setView(view: 'top' | 'oblique'): void;
+  /**
+   * 画布坐标 → 机器人 id。点不到任何一台时 null。
+   *
+   * 用屏幕距离而非射线求交：标记在整场装下的机位里只有十几像素宽，
+   * 要求正好点在网格上等于点不中。这里给 {@link PICK_RADIUS} 的容差，
+   * 「点它附近」就算点到 —— 这也是射线求交做不到的（它只认几何体本身）。
+   */
+  pickAt(x: number, y: number): string | null;
+  /** 机器人 id → 画布坐标。没定位/被褪掉/在相机背后时 null。 */
+  screenPosOf(id: string): ScreenPoint | null;
+  /**
+   * 场地米制坐标 + 离**主行驶面**的高度 → 画布坐标。把血条钉在基地/前哨这类固定地标上用。
+   *
+   * 高度基准是那张平面，不是「该点的地形高度」：地标底下正好立着建筑，
+   * 往下打射线取到的是建筑自己的顶盖（基地约 1.2 m），而斜视相机下把点抬高
+   * 会让它在画面上向外漂 —— 血条于是飘到建筑外面去。见 ObjectiveBars 的注释。
+   */
+  projectField(x: number, y: number, height: number): ScreenPoint | null;
   /** 场地模型加载完成。失败时 reject，调用方据此显示降级文案。 */
   readonly fieldLoaded: Promise<void>;
   dispose(): void;
 }
+
+/** 拾取容差（CSS 像素）。约等于一根手指在小沙盘上的精度 */
+const PICK_RADIUS = 26;
+/** 两台在屏幕上叠在一起时，这个差距内一律选离相机近的那台（上层挡住下层） */
+const PICK_DEPTH_TIE = 8;
+/** 圆饼顶面：锚点贴地会让引线穿进地板 */
+const GROUND_ANCHOR_H = 0.16;
 
 interface Spring {
   v: number;
@@ -56,6 +87,8 @@ const wrap = (a: number): number => {
 };
 
 interface RobotNode {
+  /** 流名（= StreamView.id）。拾取要还给调用方的就是它 */
+  id: string;
   grp: THREE.Group;
   icon: THREE.Object3D;
   air: boolean;
@@ -106,8 +139,16 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
 
   const cam = new THREE.PerspectiveCamera(50, 1, 0.05, 500);
   const ctl = new OrbitControls(cam, canvas);
+  // 操作手感一律 1:1 跟手，不要任何惯性或缓动 —— 沙盘是拿来快速找人的，
+  // 松手后还在滑、缩放追不上滚轮，都会让人多等一拍。
   ctl.enableDamping = false;
   ctl.zoomSpeed = 1.4;
+  // 缩放对准光标而不是画面中心：想看哪个角落就把光标放哪儿滚，
+  // 默认行为是一律朝 target 推进，放大边角时要反复补拖，那正是「不跟手」的来源
+  ctl.zoomToCursor = true;
+  // 平移按屏幕平面走，拖多少地图就走多少；默认沿相机正交面平移，
+  // 在这种俯视带倾角的机位下会拖出斜向偏移
+  ctl.screenSpacePanning = true;
 
   /**
    * 相机距离按画布宽高比算，不写死。
@@ -125,6 +166,18 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     const d = Math.max(HALF_W / Math.tan(hHalf), HALF_D / Math.tan(vHalf)) * 1.08;
     ctl.target.set(0, 0, -FIELD_CENTER_Y);
     cam.position.set(0, d * Math.cos(TILT), -FIELD_CENTER_Y + d * Math.sin(TILT));
+    /*
+     * 缩放范围锚在「整场刚好装下」这个距离上。
+     *
+     * 不设的话看似「没有限制」，实际更糟：dolly 是按比例缩 |相机−target| 的距离，
+     * 越近每格滚轮走的绝对距离越小，于是越放大越推不动；而旋转半径就是这个距离，
+     * 同一时刻拖动也跟着失灵。那不是到了边界，是渐近退化 —— 永远到不了头，
+     * 却一路越来越黏，比一个明确的硬停更让人以为卡住了。
+     *
+     * 下限 2 m：视野高约 1.9 m，一两台机器人占满画面，再近就只剩装甲板。
+     */
+    ctl.minDistance = 2;
+    ctl.maxDistance = d * 1.5;
     ctl.update();
   }
 
@@ -159,6 +212,10 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
         bg.updateMatrixWorld(true);
         scene.add(bg);
         fieldRoot = bg;
+        // 开发期把场地根节点挂出来：地标坐标（基地/前哨站在哪、多高）只能从
+        // **我们真正渲染的这份模型**上量，节点名在瘦身管线里已被剥光，离线解不出来。
+        // 生产构建里这行被 DCE。
+        if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__rmField = bg;
         // 场地就位后立刻把已有机器人的高度校正一次，免得它们悬在兜底平面上
         for (const r of robots.values()) {
           const g2 = groundAt(r.sx.v, r.sy.v);
@@ -177,8 +234,11 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
   const _q = new THREE.Quaternion();
   /** 首个真实画布尺寸到达前不取景 —— 那时 aspect 还是 1，算出来的距离是错的 */
   let fitted = false;
+  /** 画布的 CSS 尺寸。投影回屏幕坐标要用它，不能问 canvas（那是设备像素） */
+  let viewW = 0;
+  let viewH = 0;
 
-  function addRobot(team: string, num: number, air: boolean): RobotNode {
+  function addRobot(id: string, team: string, num: number, air: boolean): RobotNode {
     const col = TEAM[team] ?? '#888888';
     const grp = new THREE.Group();
     const materials: THREE.Material[] = [];
@@ -326,6 +386,7 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     grp.visible = false; // 收到位置之前不画
     scene.add(grp);
     const node: RobotNode = {
+      id,
       grp,
       icon,
       air,
@@ -340,6 +401,33 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     };
     robots.set(team + num, node);
     return node;
+  }
+
+  // ---------- 屏幕空间：拾取与面板定位 ----------
+  const _p = new THREE.Vector3();
+
+  /** NDC → 画布 CSS 像素。在相机背后返回 null（否则会投出一个镜像的鬼影） */
+  function toScreen(): ScreenPoint | null {
+    _p.project(cam);
+    if (_p.z > 1) return null;
+    return { x: (_p.x * 0.5 + 0.5) * viewW, y: (-_p.y * 0.5 + 0.5) * viewH };
+  }
+
+  /**
+   * 机器人的锚点投影到画布坐标。看不见（没定位、褪没了、在相机背后）时 null。
+   *
+   * 锚点取图标本身：地面车是圆饼顶面，空中机是悬停中的机身 —— 面板的引线要指到
+   * 观众眼里那个"它"，而不是它在地板上的投影点。
+   */
+  function project(node: RobotNode): { x: number; y: number; depth: number } | null {
+    if (!node.seen || !node.grp.visible || viewW <= 0 || viewH <= 0) return null;
+    // 直接读组的局部位置：组的父节点就是 scene（单位矩阵），局部即世界。
+    // 不走 getWorldPosition —— 那要求矩阵已更新，而这个函数会在两帧之间被调用。
+    const { x, y, z } = node.grp.position;
+    _p.set(x, y + (node.air ? AIR_ALT : GROUND_ANCHOR_H), z);
+    const depth = _p.distanceTo(cam.position);
+    const s = toScreen();
+    return s ? { x: s.x, y: s.y, depth } : null;
   }
 
   // ---------- 主循环 ----------
@@ -378,7 +466,7 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     update(list) {
       for (const rb of list) {
         const key = rb.team + rb.num;
-        const node = robots.get(key) ?? addRobot(rb.team, rb.num, rb.kind === 'drone');
+        const node = robots.get(key) ?? addRobot(rb.id, rb.team, rb.num, rb.kind === 'drone');
         if (!rb.pose) {
           node.grp.visible = false;
           continue;
@@ -414,9 +502,48 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
         }
       }
     },
+    pickAt(x, y) {
+      let bestId: string | null = null;
+      let bestD = Infinity;
+      let bestDepth = Infinity;
+      for (const node of robots.values()) {
+        const p = project(node);
+        if (!p) continue;
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d > PICK_RADIUS) continue;
+        // 明显更近就换人；差距在容差内（屏幕上就是叠着的）改看谁离相机近 ——
+        // 观众点的是自己看得见的那个，被挡在后面的不该被选中
+        const nearer = d < bestD - PICK_DEPTH_TIE;
+        const overlapping = d < bestD + PICK_DEPTH_TIE && p.depth < bestDepth;
+        if (bestId === null || nearer || overlapping) {
+          bestId = node.id;
+          bestD = Math.min(d, bestD);
+          bestDepth = p.depth;
+        }
+      }
+      return bestId;
+    },
+    screenPosOf(id) {
+      for (const node of robots.values()) {
+        if (node.id !== id) continue;
+        const p = project(node);
+        return p ? { x: p.x, y: p.y } : null;
+      }
+      return null;
+    },
+    projectField(x, y, height) {
+      if (viewW <= 0 || viewH <= 0) return null;
+      // 高度从主行驶面起算，不问 groundAt —— 它往下打射线取到的是**该点最高的那个面**，
+      // 而地标底下正好立着建筑，取回来的是建筑顶盖（基地约 1.2 m）。斜视相机下
+      // 那个高度会把投影向画面外侧推（实测基地处 20 px），血条就飘到建筑外面去了。
+      _p.set(x, FLOOR + height, -y);
+      return toScreen();
+    },
     resize(width, height) {
       const aspect = width / Math.max(1, height);
       const first = cam.aspect !== aspect && !fitted;
+      viewW = width;
+      viewH = height;
       cam.aspect = aspect;
       cam.updateProjectionMatrix();
       renderer.setSize(width, height, false);
