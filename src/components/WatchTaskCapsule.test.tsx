@@ -50,7 +50,7 @@ describe('WatchTaskCapsule', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /登录领弹丸/ }));
     expect(screen.getByRole('link', { name: /一键安装直播助手/ })).toHaveAttribute('href', base.installUrl);
-    expect(screen.getByText(/登录 Cookie 全程不经过本站/)).toBeInTheDocument();
+    expect(screen.getByText(/登录 Cookie 始终留在本地/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /登录 RoboMaster 账号/ })).toHaveAttribute('href', base.loginUrl);
   });
 
@@ -105,13 +105,13 @@ describe('WatchTaskCapsule', () => {
     expect(capsule).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('spells out the privacy boundary and the fallback when the script is missing', async () => {
+  it('shows the privacy boundary as fine print under the install action', async () => {
     render(<WatchTaskCapsule {...base} bridgeStatus="missing" />);
     await userEvent.click(screen.getByRole('button', { name: /弹丸/ }));
-    expect(screen.getByText(/登录 Cookie 全程不经过本站/)).toBeInTheDocument();
-    expect(screen.getByText(/不装也能看/)).toBeInTheDocument();
+    const hint = screen.getByText('所有请求均和 RoboMaster 官网接口交互，登录 Cookie 始终留在本地。');
+    // 提示性小字与主句（watch-panel__sum）必须是两个层级，不能混用同一样式
+    expect(hint).toHaveClass('watch-panel__hint');
     expect(screen.getByRole('link', { name: /一键安装直播助手/ })).toHaveAttribute('href', base.installUrl);
-    expect(screen.getByRole('link', { name: /官网直播页/ })).toHaveAttribute('href', base.officialUrl);
   });
 
   it('shows a non-reloading retry after heartbeat failures', async () => {
