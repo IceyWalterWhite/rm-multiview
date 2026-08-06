@@ -474,12 +474,12 @@ html { scroll-snap-type: y proximity; }
 .ob { position:absolute; left:0; top:0; width:0; height:0; z-index:7; pointer-events:none; }
 .ob--red { color:var(--red); }
 .ob--blue { color:var(--blue); }
-.ob__box { position:absolute; left:0; bottom:calc(20px * var(--ob-scale, 1)); transform:translateX(-50%) scale(var(--ob-scale, 1)); transform-origin:bottom center; display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px 6px 3px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:#0b0e13; }
-.ob__num { font-size:.6875rem; font-weight:700; line-height:1.2; letter-spacing:.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
-.ob__track { width:3.25rem; height:4px; border-radius:999px; overflow:hidden; background:#242a33; }
+.ob__box { position:absolute; left:0; bottom:calc(16px * var(--ob-scale, 1)); transform:translateX(-50%) scale(var(--ob-scale, 1)); transform-origin:bottom center; display:flex; flex-direction:column; align-items:center; gap:1px; padding:1px 5px 2px; border:1px solid rgba(255,255,255,.12); border-radius:5px; background:#0b0e13; }
+.ob__num { font-size:.625rem; font-weight:700; line-height:1.2; letter-spacing:.01em; font-variant-numeric:tabular-nums; color:var(--ink); }
+.ob__track { width:2.75rem; height:3px; border-radius:999px; overflow:hidden; background:#242a33; }
 .ob__fill { display:block; height:100%; background:currentColor; transition:width .4s cubic-bezier(.2,0,0,1); }
 /* 引线：血条浮在建筑顶上，得看得出它属于下面哪一座 */
-.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:calc(20px * var(--ob-scale, 1)); background:linear-gradient(to top, transparent, currentColor); }
+.ob__stem { position:absolute; left:-1px; bottom:0; width:2px; height:calc(16px * var(--ob-scale, 1)); background:linear-gradient(to top, transparent, currentColor); }
 .ob.is-unknown { opacity:.4; }
 .ob.is-dead .ob__num { color:var(--text-secondary); }
 

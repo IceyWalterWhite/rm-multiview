@@ -40,7 +40,7 @@ const SITES: Site[] = [
 const FIT_SPAN_M = 30;
 /** 缩放上下限：太小读不出数字，太大糊住半个场地 */
 const MIN_SCALE = 0.62;
-const MAX_SCALE = 2.6;
+const MAX_SCALE = 1.8;
 
 interface Props {
   objectives: FusedObjectives | null;
@@ -63,11 +63,11 @@ export function ObjectiveBars({ objectives, scene }: Props) {
         const el = hosts.current.get(site.key);
         if (!el) continue;
         const at = OBJECTIVE_SITES[site.key];
-        // 横向取底面中心、纵向取建筑顶：把「抬高」拆成两个分量，只保留竖直那一半。
-        // 整点一起抬会横向漂 —— 相机是斜视的，越靠画面边缘漂得越多（实测抬 1.1 m，
-        // 中间的前哨只漂 4px，贴场边的基地漂了 20px，血条就飘到基地外面去了）。
-        // 那是正确的透视，但对一个「贴在建筑上的标签」来说是错的：
-        // 观众读的是它落在哪个像素上，不是它在三维里悬在哪。
+        // 锚点 = 建筑顶点的**完整**投影（x、y 都取 top）。透视里竖直线的投影不竖直，
+        // 底面中心与顶点的屏幕 x 本来就不同（实测默认视角基地差 13px，放大后能差
+        // 到 69px，方向还随视角翻转）—— 混用 foot.x 会让血条横向偏离最高点。
+        // 「血条悬在顶点之上」的那段间隙放在 CSS 屏幕空间（.ob__box 的 bottom），
+        // 不加进世界坐标：世界空间的额外抬高才是当初横向漂移的真凶。
         const foot = s.projectField(at.x, at.y, 0);
         const top = s.projectField(at.x, at.y, site.top);
         // 缩放跟着沙盘走：量「场地上 1 米现在等于几个像素」。
@@ -79,7 +79,7 @@ export function ObjectiveBars({ objectives, scene }: Props) {
           continue;
         }
         el.style.visibility = '';
-        el.style.transform = `translate3d(${Math.round(foot.x)}px, ${Math.round(top.y)}px, 0)`;
+        el.style.transform = `translate3d(${Math.round(top.x)}px, ${Math.round(top.y)}px, 0)`;
         const pxPerM = Math.hypot(east.x - foot.x, east.y - foot.y);
         const k = refPxPerM > 0
           ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, pxPerM / refPxPerM))
