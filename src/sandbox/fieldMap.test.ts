@@ -36,8 +36,8 @@ describe('minimapToField', () => {
     expect(minimapToField(0.2, 0.5).x).toBeGreaterThan(minimapToField(0.8, 0.5).x);
   });
 
-  it('纵轴翻转：v 增大则 Y 减小', () => {
-    expect(minimapToField(0.5, 0.2).y).toBeGreaterThan(minimapToField(0.5, 0.8).y);
+  it('纵轴不翻转：v 增大则 Y 增大（2026-08-06 现网实测钉下的方向）', () => {
+    expect(minimapToField(0.5, 0.2).y).toBeLessThan(minimapToField(0.5, 0.8).y);
   });
 
   it('满幅对应木质底板宽度', () => {
@@ -47,7 +47,7 @@ describe('minimapToField', () => {
 
 describe('headingToYaw', () => {
   /**
-   * 两个轴都翻向，方向向量取负两次 —— 所以是整体旋转 π，不是取负。
+   * 只有横轴翻向 —— 是绕纵轴的镜像（yaw = π − θ），不是旋转 π。
    * 这条最容易凭直觉写错，逐个象限钉住。
    */
   it('小地图正右 = 场地 −X', () => {
@@ -55,8 +55,8 @@ describe('headingToYaw', () => {
   });
 
   it('小地图正下 = 场地 +Y', () => {
-    // 屏幕 y 向下为正，场地 Y 向上为正
-    expect(deg(headingToYaw(Math.PI / 2))).toBeCloseTo(-90, 6);
+    // 屏幕 y 向下为正，场地 Y 与小地图 v 同向（2026-08-06 现网实测）
+    expect(deg(headingToYaw(Math.PI / 2))).toBeCloseTo(90, 6);
   });
 
   it('小地图正左 = 场地 +X', () => {
