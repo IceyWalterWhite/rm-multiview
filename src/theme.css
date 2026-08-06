@@ -240,7 +240,6 @@ html { scroll-snap-type: y proximity; }
 .watch-capsule { display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap; cursor:pointer; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:.2rem .6rem; font-size:.8125rem; line-height:1.45; letter-spacing:.01em; text-decoration:none; transition:transform 100ms ease-out, border-color 150ms ease; }
 .watch-capsule:hover { border-color:var(--accent); }
 .watch-capsule:active { transform:scale(.97); }
-.watch-capsule--install { color:var(--accent); }
 .watch-capsule__count, .watch-tier__gain { color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums; }
 .watch-capsule__unit, .watch-capsule__time, .watch-capsule__sep { color:var(--text-secondary); }
 .pellet-dot { width:.55rem; height:.55rem; flex:none; border-radius:50%; background:radial-gradient(circle at 32% 30%, #fff2c2, #d9a521 72%); box-shadow:0 0 5px rgba(255,213,74,.4); }
@@ -248,7 +247,9 @@ html { scroll-snap-type: y proximity; }
 .watch-dialog[open] { opacity:1; transform:none; }
 @starting-style { .watch-dialog[open] { opacity:0; transform:scale(.94) translateY(6px); } }
 .watch-dialog::backdrop { background:rgba(0,0,0,.22); }
-.watch-panel { width:min(19rem, calc(100vw - 2rem)); display:flex; flex-direction:column; gap:.5rem; padding:.875rem; border:1px solid rgba(255,255,255,.12); border-radius:.875rem; background:rgba(24,28,35,.94); box-shadow:0 20px 50px rgba(0,0,0,.6); }
+/* 面板正好落在人气条上方：那 6% 的透光率会把亮黄票数透成可读的重影，
+   所以这块玻璃必须真的磨砂（blur），而不只是"接近不透明" */
+.watch-panel { width:min(19rem, calc(100vw - 2rem)); display:flex; flex-direction:column; gap:.5rem; padding:.875rem; border:1px solid rgba(255,255,255,.12); border-radius:.875rem; background:rgba(24,28,35,.94); -webkit-backdrop-filter:blur(20px) saturate(160%); backdrop-filter:blur(20px) saturate(160%); box-shadow:0 20px 50px rgba(0,0,0,.6); }
 .watch-panel__title, .watch-panel__sum, .watch-panel__note { margin:0; }
 .watch-panel__title { color:var(--ink); font-size:1rem; }
 .watch-panel__sum, .watch-panel__note, .watch-tier { color:var(--text-secondary); font-size:.8125rem; line-height:1.5; }
@@ -259,6 +260,13 @@ html { scroll-snap-type: y proximity; }
 .watch-tier__bar { position:absolute; right:0; bottom:.15rem; left:1.45rem; height:2px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.08); }
 .watch-tier__bar-fill { display:block; height:100%; background:var(--accent); }
 .watch-panel__note a { color:var(--accent); }
+.watch-panel__note b { color:var(--ink); font-weight:600; }
+/* 面板里的行动项：主行动（安装）实心，次行动（登录）描边 —— 一屏里只有一个最亮的东西 */
+.watch-action { display:flex; align-items:center; justify-content:center; min-height:2rem; padding:.25rem .75rem; border:1px solid transparent; border-radius:.5rem; background:var(--accent); color:#1a1a1a; font-size:.8125rem; font-weight:700; line-height:1.45; text-decoration:none; transition:transform 100ms ease-out, filter 150ms ease, border-color 150ms ease; }
+.watch-action:hover { color:#1a1a1a; filter:brightness(1.08); }
+.watch-action:active { transform:scale(.98); }
+.watch-action--ghost { background:transparent; border-color:var(--line-strong); color:var(--ink); font-weight:600; }
+.watch-action--ghost:hover { color:var(--accent); border-color:var(--accent); filter:none; }
 
 /* 底部留 34px 给备案号条（绝对定位其内），两屏总高保持 2×100dvh 不变 */
 .chat-section { position:relative; height:100vh; height:100dvh; display:flex; gap:10px; padding:14px 14px 34px; }
@@ -370,6 +378,7 @@ html { scroll-snap-type: y proximity; }
   .id-editor-dialog::backdrop { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.7); }
   .sync-panel { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
   .sync-badge { -webkit-backdrop-filter:none; backdrop-filter:none; background:rgba(0,0,0,.88); }
+  .watch-panel { -webkit-backdrop-filter:none; backdrop-filter:none; background:#14171c; }
 }
 
 /* 窄窗口控制栏渐进收纳：固定项合计 ~744px（清晰度 pill 246 + composer 最小 320 + 路标 128 + gap 30 + 页边 20）。
@@ -419,12 +428,15 @@ html { scroll-snap-type: y proximity; }
 .cheer__vs:hover { transform:scale(1.12); }
 .cheer__vs.is-pulse { animation:cheer-vs-pulse 500ms cubic-bezier(.2,0,0,1); }
 @keyframes cheer-vs-pulse { 0% { transform:scale(1); } 40% { transform:scale(1.16); } 100% { transform:scale(1); } }
-.cheer-vote { flex:none; cursor:pointer; border:1px solid; border-radius:999px; background:rgba(255,255,255,.06); padding:.1rem .6rem; font-size:clamp(.6875rem, 1.2vw, .8125rem); line-height:1.45; font-weight:700; letter-spacing:.02em; transition:transform 100ms ease-out, background-color 150ms ease, border-color 150ms ease; }
-.cheer-vote--red { color:#ff8a94; border-color:rgba(255,59,78,.5); }
-.cheer-vote--red:hover { background:rgba(255,59,78,.18); border-color:#ff8a94; }
-.cheer-vote--blue { color:#8fbcff; border-color:rgba(59,130,246,.5); }
-.cheer-vote--blue:hover { background:rgba(59,130,246,.2); border-color:#8fbcff; }
-.cheer-vote:active { transform:scale(.97); }
+/* 可投票时，半边人气条本身就是按钮 —— 按下即有反应（不等 click），不额外占位 */
+/* z-index 不能省：轨道是 .cheer__head 的后继兄弟，不抬起来的话下面那条延伸出去的
+   命中区会被轨道自己接走（点在色条上反而投不出票） */
+.cheer__team--vote { position:relative; z-index:1; cursor:pointer; color:inherit; font:inherit; text-align:inherit; border:0; border-radius:.5rem; background:transparent; padding:.15rem .3rem; margin:-.15rem -.3rem; transition:transform 100ms ease-out, background-color 150ms ease; }
+/* 命中区向下延过 gap 与轨道：轨道只有 6px，靠它自己接不住手指 */
+.cheer__team--vote::after { content:''; position:absolute; inset:0 0 -.7rem; }
+.cheer__team--red.cheer__team--vote:hover { background:rgba(255,59,78,.16); }
+.cheer__team--blue.cheer__team--vote:hover { background:rgba(59,130,246,.18); }
+.cheer__team--vote:active { transform:scale(.985); }
 
 @media (prefers-reduced-motion: reduce) {
   .cheer__fill { transition:width .2s linear; }
@@ -436,11 +448,12 @@ html { scroll-snap-type: y proximity; }
 @media (prefers-contrast: more) {
   .cheer { background:rgba(8,10,14,.97); }
   .cheer__track { outline:1px solid var(--line-strong); }
-  .cheer-vote { background:rgba(0,0,0,.65); border-width:2px; }
+  .cheer__team--vote { outline:1px solid var(--line-strong); }
 }
 
+/* 触屏：命中区再往外扩到 44px 级别，但不撑高这一行（它盖在画面上） */
 @media (pointer: coarse) {
-  .cheer-vote { min-height:44px; }
+  .cheer__team--vote::after { inset:-.55rem 0 -.95rem; }
 }
 
 /* ---- 实时沙盘 ---- */

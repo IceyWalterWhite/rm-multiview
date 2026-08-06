@@ -38,8 +38,10 @@ export const demoTitleFetcher = async (): Promise<MatchTitle | null> => ({
   isNext: false,
 });
 
-// 助威演示：队名取自真实对阵格式（校名 + 队名）。canVote 恒 false——线上就是这个形态：
-// 官方投票接口强制 application/json，必然触发 CORS 预检，而预检只白名单 robomaster.com。
+// 助威演示：队名取自真实对阵格式（校名 + 队名）。
+// 页面自己发不出投票请求——官方接口强制 application/json，必然触发 CORS 预检，
+// 而预检只白名单 robomaster.com；线上能投票是靠直播助手（油猴脚本）代发。
+// 所以 ?demo 里 canVote 恒 false（没有助手），?stagedemo 里恒 true（本地假投票，只验手感）。
 export const demoCheer = {
   redLabel: '演示大学 DEMO',
   blueLabel: '示例学院 SAMPLE',
@@ -49,8 +51,8 @@ export const demoCheer = {
 };
 
 /**
- * @deprecated The viewing-time/pellet demo is paused pending a new UX design.
- * These fixtures remain only to preserve the retained component tests.
+ * 观看时长档位的假数据，线上实测口径：7/10/30 分钟 → 累计 500/1500/4500 弹丸。
+ * 供组件测试与 `?stagedemo` 的胶囊预览使用。
  */
 export const demoWatchTiers = [
   { id: 1, minutes: 7, seconds: 420, pellets: 500, increment: 500, granted: true },

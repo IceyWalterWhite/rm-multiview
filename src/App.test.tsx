@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from './App';
 import type { CatalogState } from './hooks/useCatalog';
 
@@ -89,7 +90,7 @@ describe('App', () => {
     mockCheer.current.visible = true;
   });
 
-  it('mounts the official bridge setup entry in the live app', () => {
+  it('mounts the official bridge setup entry in the live app', async () => {
     mockState.current = {
       status: 'live',
       catalog: {
@@ -101,7 +102,11 @@ describe('App', () => {
       },
     };
     const { container } = render(<App />);
+    // 底栏只有这一颗胶囊；装脚本的入口收在它展开的面板里，不在栏上另占一格
     expect(container.querySelector('.watch-capsule')).not.toBeNull();
+    expect(screen.queryByRole('link', { name: '一键安装直播助手' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /登录领弹丸/ }));
     expect(screen.getByRole('link', { name: '一键安装直播助手' })).toHaveAttribute('href', '/rmlive-companion.user.js');
   });
 

@@ -32,6 +32,14 @@ export interface WatchTaskCapsuleProps {
   onRetryHeartbeat: () => void;
 }
 
+/**
+ * 底栏那颗胶囊。顶层只有两种字面：
+ *
+ * - 已登录 →「⚫N 弹丸 · M 分」
+ * - 没登录 →「登录领弹丸」
+ *
+ * 「装没装直播助手」不占胶囊 —— 它只改变点击的去向，装脚本这件事收进展开面板里说。
+ */
 export function WatchTaskCapsule({
   loggedIn,
   accumulatedSeconds,
@@ -63,16 +71,14 @@ export function WatchTaskCapsule({
 
   const close = useCallback(() => setOpen(false), []);
 
-  if (!loggedIn && bridgeStatus === 'missing') {
-    return (
-      <a className="watch-capsule watch-capsule--login" href={installUrl} target="_blank" rel="noopener noreferrer">
-        <i className="pellet-dot" aria-hidden="true" />一键安装直播助手
-      </a>
-    );
-  }
+  const bridgeReady = bridgeStatus === 'ready';
 
-  if (!loggedIn) {
-    // 未登录：整颗胶囊退化成外链，不假装有进度
+  // 「助手已就绪、只差登录」是唯一一步能走完的情况 —— 那就别拐弯，胶囊本身即登录外链。
+  //
+  // probing 有意归到「展开面板」那一侧：探测超时 8 秒，而没装脚本的人整整 8 秒都待在
+  // probing 里；若这段时间按「直接跳登录」处理，最需要看到安装说明的人恰好看不到。
+  // 反过来，装了脚本的探测是毫秒级的，几乎不会真的停在 probing。
+  if (!loggedIn && bridgeReady) {
     return (
       <a className="watch-capsule watch-capsule--login" href={loginUrl} target="_blank" rel="noopener noreferrer">
         <i className="pellet-dot" aria-hidden="true" />登录领弹丸
@@ -93,16 +99,17 @@ export function WatchTaskCapsule({
         onClick={() => setOpen((v) => !v)}
       >
         <i className="pellet-dot" aria-hidden="true" />
-        <span className="watch-capsule__count">{earnedPellets}</span>
-        <span className="watch-capsule__unit">弹丸</span>
-        <span className="watch-capsule__sep" aria-hidden="true">·</span>
-        <span className="watch-capsule__time">{formatWatchDuration(accumulatedSeconds, true)}</span>
+        {loggedIn ? (
+          <>
+            <span className="watch-capsule__count">{earnedPellets}</span>
+            <span className="watch-capsule__unit">弹丸</span>
+            <span className="watch-capsule__sep" aria-hidden="true">·</span>
+            <span className="watch-capsule__time">{formatWatchDuration(accumulatedSeconds, true)}</span>
+          </>
+        ) : (
+          '登录领弹丸'
+        )}
       </button>
-      {bridgeStatus === 'missing' && !open && (
-        <a className="watch-capsule watch-capsule--install" href={installUrl} target="_blank" rel="noopener noreferrer">
-          一键安装直播助手
-        </a>
-      )}
 
       <dialog
         ref={dlgRef}
@@ -112,42 +119,67 @@ export function WatchTaskCapsule({
       >
         <div className="watch-panel">
           <h3 className="watch-panel__title">观看时长 · 弹丸</h3>
-          <p className="watch-panel__sum">
-            已获得 <b>{earnedPellets}</b> 弹丸 · 累计观看 {formatWatchDuration(accumulatedSeconds)}
-          </p>
-          <ol className="watch-tiers">
-            {tiers.map((t, i) => (
-              <li key={t.id} className={`watch-tier${t.granted ? ' is-done' : ''}${i === nextIndex ? ' is-next' : ''}`}>
-                <span className="watch-tier__mark" aria-hidden="true">{t.granted ? '✓' : '○'}</span>
-                <span className="watch-tier__time">观看 {t.minutes} 分钟</span>
-                <span className="watch-tier__gain">+{t.increment}</span>
-                <span className="watch-tier__state">
-                  {t.granted ? '已获得' : `还差 ${formatWatchDuration(t.seconds - accumulatedSeconds, true)}`}
-                </span>
-                {i === nextIndex && (
-                  <span className="watch-tier__bar" aria-hidden="true">
-                    <span
-                      className="watch-tier__bar-fill"
-                      style={{ width: `${tierProgressPct(tiers, i, accumulatedSeconds)}%` }}
-                    />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
+
+          {loggedIn ? (
+            <>
+              <p className="watch-panel__sum">
+                已获得 <b>{earnedPellets}</b> 弹丸 · 累计观看 {formatWatchDuration(accumulatedSeconds)}
+              </p>
+              <ol className="watch-tiers">
+                {tiers.map((t, i) => (
+                  <li key={t.id} className={`watch-tier${t.granted ? ' is-done' : ''}${i === nextIndex ? ' is-next' : ''}`}>
+                    <span className="watch-tier__mark" aria-hidden="true">{t.granted ? '✓' : '○'}</span>
+                    <span className="watch-tier__time">观看 {t.minutes} 分钟</span>
+                    <span className="watch-tier__gain">+{t.increment}</span>
+                    <span className="watch-tier__state">
+                      {t.granted ? '已获得' : `还差 ${formatWatchDuration(t.seconds - accumulatedSeconds, true)}`}
+                    </span>
+                    {i === nextIndex && (
+                      <span className="watch-tier__bar" aria-hidden="true">
+                        <span
+                          className="watch-tier__bar-fill"
+                          style={{ width: `${tierProgressPct(tiers, i, accumulatedSeconds)}%` }}
+                        />
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <p className="watch-panel__sum">在本站看比赛，也能累计官方观看时长换弹丸。</p>
+          )}
+
           {heartbeatStatus === 'error' && (
             <p className="watch-panel__note" role="alert">
               {heartbeatError ?? '观看计时已停止'}。
               <button type="button" className="send-btn" onClick={onRetryHeartbeat}>重试观看计时</button>
             </p>
           )}
-          {bridgeStatus === 'missing' ? (
-            <p className="watch-panel__note">
-              未检测到直播助手，本站不能累计观看时长；上方仍是官网已有进度。
-              <a href={installUrl} target="_blank" rel="noopener noreferrer">一键安装直播助手</a>
-              ，或前往<a href={officialUrl} target="_blank" rel="noopener noreferrer">官网直播页</a>观看。
-            </p>
-          ) : (
+
+          {!bridgeReady && (
+            <>
+              <a className="watch-action" href={installUrl} target="_blank" rel="noopener noreferrer">
+                一键安装直播助手
+              </a>
+              <p className="watch-panel__note">
+                {bridgeStatus === 'probing' && '正在检测直播助手…'}
+                {bridgeStatus === 'error' && '检测到的助手版本对不上，装这一份即可。'}
+                助手只跑在你自己的浏览器里，直接和 RoboMaster 官方接口通信：
+                <b>登录 Cookie 全程不经过本站</b>，本站只拿得到观看时长与弹丸进度，
+                <a href={installUrl} target="_blank" rel="noopener noreferrer">源码</a>公开可查。
+                不装也能看，只是时长要去<a href={officialUrl} target="_blank" rel="noopener noreferrer">官网直播页</a>累计。
+              </p>
+            </>
+          )}
+
+          {!loggedIn && (
+            <a className="watch-action watch-action--ghost" href={loginUrl} target="_blank" rel="noopener noreferrer">
+              登录 RoboMaster 账号
+            </a>
+          )}
+
+          {loggedIn && bridgeReady && (
             <p className="watch-panel__note">
               {heartbeatStatus === 'complete'
                 ? '观看奖励已全部完成。'

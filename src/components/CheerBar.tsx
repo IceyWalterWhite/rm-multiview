@@ -68,17 +68,6 @@ export function CheerBar({
     later(() => setPulse(false), PULSE_MS);
   }, [redVotes, blueVotes, later]);
 
-  const voteButton = (side: 'red' | 'blue') => (
-    <button
-      type="button"
-      className={`cheer-vote cheer-vote--${side}`}
-      aria-label={`为${side === 'red' ? redLabel : blueLabel}助威`}
-      onClick={() => onVote?.(side)}
-    >
-      助威
-    </button>
-  );
-
   const chip = (side: 'red' | 'blue') => {
     const { count, icon } = delta[side];
     return (
@@ -89,6 +78,38 @@ export function CheerBar({
     );
   };
 
+  /**
+   * 一侧的队名 + 票数。可投票时它自己就是投票按钮 —— 「点人气条的红/蓝半边即助威」，
+   * 不另立一颗「助威」小胶囊：观赛屏上多一个可点元素就多一分噪音，而这半边本来就
+   * 是这支队伍的地盘，点它助威是最短的因果链。
+   * 命中区靠 ::after 向下延到轨道那一半（见 theme.css），不靠把这一行撑高。
+   */
+  const team = (side: 'red' | 'blue') => {
+    const label = side === 'red' ? redLabel : blueLabel;
+    const name = <span className="cheer__name" title={label}>{label}</span>;
+    const votes = (
+      <span className="cheer__votes" aria-hidden="true">
+        {formatVotes(side === 'red' ? redShown : blueShown)}
+      </span>
+    );
+    // 红队向内、蓝队向内：票数永远贴着中缝，队名永远贴着两端
+    const inner = side === 'red'
+      ? <>{name}{votes}{chip('red')}</>
+      : <>{chip('blue')}{votes}{name}</>;
+    const cls = `cheer__team cheer__team--${side}`;
+    if (!canVote) return <div className={cls}>{inner}</div>;
+    return (
+      <button
+        type="button"
+        className={`${cls} cheer__team--vote`}
+        aria-label={`为${label}助威`}
+        onClick={() => onVote?.(side)}
+      >
+        {inner}
+      </button>
+    );
+  };
+
   return (
     <div className="cheer" role="group" aria-label="人气助威">
       <span className="sr-only">
@@ -96,19 +117,9 @@ export function CheerBar({
       </span>
 
       <div className="cheer__head">
-        <div className="cheer__team cheer__team--red">
-          <span className="cheer__name" title={redLabel}>{redLabel}</span>
-          <span className="cheer__votes" aria-hidden="true">{formatVotes(redShown)}</span>
-          {chip('red')}
-          {canVote && voteButton('red')}
-        </div>
+        {team('red')}
         <span className="cheer__gap" aria-hidden="true" />
-        <div className="cheer__team cheer__team--blue">
-          {canVote && voteButton('blue')}
-          {chip('blue')}
-          <span className="cheer__votes" aria-hidden="true">{formatVotes(blueShown)}</span>
-          <span className="cheer__name" title={blueLabel}>{blueLabel}</span>
-        </div>
+        {team('blue')}
       </div>
 
       {error && <span className="cheer-error" role="alert">{error}</span>}
