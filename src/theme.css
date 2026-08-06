@@ -261,6 +261,9 @@ html { scroll-snap-type: y proximity; }
 .watch-tier__bar-fill { display:block; height:100%; background:var(--accent); }
 .watch-panel__note a { color:var(--accent); }
 .watch-panel__note b { color:var(--ink); font-weight:600; }
+/* 隐私提示是随行小字（fine print）：比 __sum/__note 再降一级——字号小两号、明度压暗、
+   小字加一点正字距保住可读性。它是安装按钮的随附说明，不能和主句抢同一层级 */
+.watch-panel__hint { margin:0; color:var(--text-secondary); opacity:.72; font-size:.6875rem; line-height:1.6; letter-spacing:.01em; }
 /* 面板里的行动项：主行动（安装）实心，次行动（登录）描边 —— 一屏里只有一个最亮的东西 */
 .watch-action { display:flex; align-items:center; justify-content:center; min-height:2rem; padding:.25rem .75rem; border:1px solid transparent; border-radius:.5rem; background:var(--accent); color:#1a1a1a; font-size:.8125rem; font-weight:700; line-height:1.45; text-decoration:none; transition:transform 100ms ease-out, filter 150ms ease, border-color 150ms ease; }
 .watch-action:hover { color:#1a1a1a; filter:brightness(1.08); }
@@ -270,9 +273,13 @@ html { scroll-snap-type: y proximity; }
 
 /* 底部留 34px 给备案号条（绝对定位其内），两屏总高保持 2×100dvh 不变 */
 .chat-section { position:relative; height:100vh; height:100dvh; display:flex; gap:10px; padding:14px 14px 34px; }
-.icp-footer { position:absolute; left:0; right:0; bottom:0; height:34px; display:flex; align-items:center; justify-content:center; font-size:.75rem; }
+.icp-footer { position:absolute; left:0; right:0; bottom:0; height:34px; display:flex; align-items:center; justify-content:center; gap:.9rem; font-size:.75rem; }
 .icp-footer a { color:var(--text-secondary); text-decoration:none; }
 .icp-footer a:hover { color:var(--ink); text-decoration:underline; }
+/* 图标链接不吃下划线（下划线画在 SVG 底下很突兀），悬停只做颜色提亮；
+   16px 图标本体太小，负 margin 抵掉的 padding 把命中区扩到 ~32px 而不动布局 */
+.icp-footer__github { display:inline-flex; align-items:center; padding:.5rem; margin:-.5rem; }
+.icp-footer__github:hover { text-decoration:none; }
 .reserved-panel { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface-1); }
 .rp-tabs { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 8px; border-bottom:1px solid var(--line); flex:none; }
 .rp-tab { background:transparent; border:1px solid var(--line-strong); color:#cfd3d8; border-radius:6px; padding:4px 14px; font-size:.8125rem; cursor:pointer; }

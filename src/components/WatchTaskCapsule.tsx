@@ -162,14 +162,9 @@ export function WatchTaskCapsule({
               <a className="watch-action" href={installUrl} target="_blank" rel="noopener noreferrer">
                 一键安装直播助手
               </a>
-              <p className="watch-panel__note">
-                {bridgeStatus === 'probing' && '正在检测直播助手…'}
-                {bridgeStatus === 'error' && '检测到的助手版本对不上，装这一份即可。'}
-                助手只跑在你自己的浏览器里，直接和 RoboMaster 官方接口通信：
-                <b>登录 Cookie 全程不经过本站</b>，本站只拿得到观看时长与弹丸进度，
-                <a href={installUrl} target="_blank" rel="noopener noreferrer">源码</a>公开可查。
-                不装也能看，只是时长要去<a href={officialUrl} target="_blank" rel="noopener noreferrer">官网直播页</a>累计。
-              </p>
+              {bridgeStatus === 'probing' && <p className="watch-panel__note">正在检测直播助手…</p>}
+              {bridgeStatus === 'error' && <p className="watch-panel__note">检测到的助手版本对不上，装这一份即可。</p>}
+              <p className="watch-panel__hint">所有请求均和 RoboMaster 官网接口交互，登录 Cookie 始终留在本地。</p>
             </>
           )}
 
