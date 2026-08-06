@@ -165,7 +165,9 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
     const hHalf = Math.atan(Math.tan(vHalf) * cam.aspect);
     const d = Math.max(HALF_W / Math.tan(hHalf), HALF_D / Math.tan(vHalf)) * 1.08;
     ctl.target.set(0, 0, -FIELD_CENTER_Y);
-    cam.position.set(0, d * Math.cos(TILT), -FIELD_CENTER_Y + d * Math.sin(TILT));
+    // 相机放在场地 +Y 一侧（世界 −z）：默认视角等于把旧展示整个转 180°，红方(+X)
+    // 呈现在屏幕左边，与官方转播小地图的取向一致（2026-08-06 用户验收口径）
+    cam.position.set(0, d * Math.cos(TILT), -FIELD_CENTER_Y - d * Math.sin(TILT));
     /*
      * 缩放范围锚在「整场刚好装下」这个距离上。
      *
@@ -559,7 +561,8 @@ export function createScene(canvas: HTMLCanvasElement, glbUrl: string): SandboxS
         fitTop();
       } else {
         ctl.target.set(0, 0, -FIELD_CENTER_Y);
-        cam.position.set(0, 14, 14);
+        // 与 fitTop 同侧（场地 +Y），斜视和俯视之间切换时不做水平掉头
+        cam.position.set(0, 14, -2 * FIELD_CENTER_Y - 14);
         ctl.update();
       }
     },
