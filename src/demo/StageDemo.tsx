@@ -10,8 +10,10 @@ import {
   type QualityLabel,
 } from '../config';
 import type { OfficialBridgeStatus } from '../net/officialBridge';
+import type { SandboxSnapshot } from '../sandbox/fleet';
 import type { Profile } from '../types';
 import { demoCatalog, demoCheer, demoWatchTiers } from './demoData';
+import { demoFleet } from './demoFleet';
 
 /**
  * 仅开发期：用假名单驱动完整舞台，在没有直播的时候也能调布局。
@@ -52,6 +54,25 @@ export default function StageDemo() {
   useEffect(() => {
     const id = setInterval(() => setVotes((v) => ({ red: v.red + 8, blue: v.blue + 5 })), 3000);
     return () => clearInterval(id);
+  }, []);
+
+  // 沙盘的假车队：按真实采样节奏（3 Hz）推给渲染层。
+  // 没有直播时识别侧产不出任何位置，不喂这一份的话沙盘上什么都没有 ——
+  // 机器人标记、点击开面板、四条血条全都无从验收。
+  // 走 SandboxMap 暴露的 dev 句柄，不为演示在生产组件上开新 props。
+  useEffect(() => {
+    let raf = 0;
+    let last = -1;
+    const start = performance.now();
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (now - last < 330) return;
+      last = now;
+      const push = (window as unknown as { __rmSandboxFake?: (s: SandboxSnapshot) => void }).__rmSandboxFake;
+      push?.(demoFleet((now - start) / 1000));
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, []);
   // 本地乐观加票：只验手感，不出网（真实投票走 useCheer 的批量 flush）
   const vote = useCallback((side: 'red' | 'blue') => {
