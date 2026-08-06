@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import type { Danmaku, Profile, ZoneCatalog } from '../types';
 import type { QualityLabel } from '../config';
 import { SideColumn } from './SideColumn';
@@ -166,7 +167,7 @@ export function LiveStage(p: Props) {
   // 底栏挤不挤得下由实测决定，不猜阈值 —— 一行还是两行、有没有弹幕、
   // 观看胶囊是「500 弹丸 · 8 分」还是「登录领弹丸」，都在改占位。
   const ctlRowRef = useRef<HTMLDivElement>(null);
-  const hintW = useRef(0);
+  const measuring = useRef(false);
   const [tightBar, setTightBar] = useState(false);
   // 与 theme.css 的 740px 断点是同一个数：那条注释说明了为什么是它
   const [narrowBar, setNarrowBar] = useState(
@@ -184,23 +185,25 @@ export function LiveStage(p: Props) {
     const el = ctlRowRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const measure = () => {
-      // 写全时量一次文字宽并记住：收起之后它已不在 DOM 里，没法再量
-      const text = el.querySelector<HTMLElement>('.scroll-hint__text');
-      if (text) hintW.current = Math.max(hintW.current, text.getBoundingClientRect().width);
-      // 富余空间要按「各项实测宽度之和」倒推，不能用 scrollWidth：
-      // .controls__tail 带 margin-left:auto，富余全被它吃成外边距，
-      // scrollWidth 于是恒等于 clientWidth —— 那样一旦收起就再也展不开。
-      const kids = [...el.children] as HTMLElement[];
-      const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
-      const used = kids.reduce((sum, k) => sum + k.getBoundingClientRect().width, 0)
-        + gap * Math.max(0, kids.length - 1);
-      const spare = el.clientWidth - used;
-      // 收起后要宽到「写全还有富余」才展开，12px 迟滞挡住临界处的反复横跳
-      setTightBar((cur) => (cur ? spare < hintW.current + 12 : el.scrollWidth > el.clientWidth + 1));
+      if (measuring.current) return;
+      measuring.current = true;
+      try {
+        // 判据只有一条：**把路标写全之后这一行会不会溢出**。所以必须在写全的状态下量。
+        //
+        // 别再想着「算还剩多少富余」—— 这一行里总有个吃掉全部富余的元素：
+        // 经典布局是 flex:1 的发送条，沙盘布局是带 margin-left:auto 的尾部。
+        // 两种情况下 scrollWidth 都恒等于 clientWidth，富余永远算成 0，
+        // 于是一旦收起就再也展不开（这个坑我踩了两次，换个元素又是一次）。
+        flushSync(() => setTightBar(false));
+        if (el.scrollWidth > el.clientWidth + 1) flushSync(() => setTightBar(true));
+      } finally {
+        measuring.current = false;
+      }
     };
+    // 不在这里同步 measure 一次：effect 体内 flushSync 会被 React 警告。
+    // ResizeObserver 在 observe 后本来就会回调一次，首帧由它兜。
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    measure();
     return () => ro.disconnect();
   }, [layout, p.danmakuEnabled]);
 
