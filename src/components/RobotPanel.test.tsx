@@ -32,6 +32,13 @@ describe('RobotPanel', () => {
     expect(pin.textContent).toBe(''); // 仅图标，不带文字标签
   });
 
+  it('removes the 第一视角 suffix from the robot name', () => {
+    setup({ name: '红方英雄第一视角' });
+    expect(screen.getByText('红方英雄')).toBeInTheDocument();
+    expect(screen.queryByText('红方英雄第一视角')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '红方英雄 详情' })).toBeInTheDocument();
+  });
+
   it('shows current / max hp with a bar', () => {
     const { container } = setup();
     expect(screen.getByText('320 / 400')).toBeInTheDocument();

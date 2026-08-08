@@ -43,7 +43,7 @@
  * 两者色相差约 3，直接拿离线像素标定会系统性偏。详见 rmui/layout.ts 的
  * SELF_MARKER_GREEN 注释与 tools/sandbox/README.md。
  */
-export { detectSelfMarker, type SelfMarker } from './marker';
+export { detectSelfMarker, detectSelfMarkerResilient, type SelfMarker } from './marker';
 export { readHp, type HpReading } from './hp';
 export { readObjectives, type Objectives, type ObjectiveHp } from './objectives';
 export { segmentCandidates, readField, type GlyphCandidate, type GlyphCountRange, type RawRead } from './digits';

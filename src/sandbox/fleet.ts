@@ -101,8 +101,6 @@ export function createFleet(members: readonly FleetMember[]): Fleet {
   }
 
   const fusion: ObjectiveFusion = createObjectiveFusion();
-  // 上一轮有没有任何一路在放比赛。false→true 的那一刻就是新回合开始。
-  let wasLive = false;
 
   function snapshot(): SandboxSnapshot {
     const robots = [...slots.values()].map((s) => ({
@@ -143,9 +141,10 @@ export function createFleet(members: readonly FleetMember[]): Fleet {
         // 位置一旦识别到就留着 —— 阵亡、被切走、漏检都不清空，交给 poseAgeMs 褪色
         if (state.pose) slot.pose = markerToField(state.pose, slot.member.kind);
 
-        // 战略目标只在有 HUD 的地面路上读。空中路那四块 ROI 落在 FPV 画面本身，
-        // 实测捏造率 35.7%；没有 HUD 的帧上读到的一律是转播画面里的噪声。
-        if (slot.member.kind === 'ground' && state.phase !== 'off') {
+        // 战略目标只在共享记分板仍可信的地面路上读。这个信号不能拿 phase 代替：
+        // 彩色 HUD 的 0 血阵亡是 dead，但顶部数字仍正常；整体灰化的 dead 才会把
+        // 5000 误切成 5 等短数字。空中路没有这块记分板，恒为不可读。
+        if (slot.member.kind === 'ground' && state.objectivesReadable) {
           objectiveReadings.push(readObjectives(s.frame));
         }
       }
@@ -154,11 +153,11 @@ export function createFleet(members: readonly FleetMember[]): Fleet {
         if (!seen.has(id)) slot.poseAgeMs = slot.pose ? slot.poseAgeMs : Infinity;
       }
 
-      const anyLive = [...slots.values()].some((s) => s.phase === 'live');
-      // 回合边界：从「一路 live 都没有」重新出现 live。目标血量每回合归满，
-      // 单调约束只在回合内成立，跨回合必须清掉，否则新回合的满血会被当成误读否掉。
-      if (anyLive && !wasLive) fusion.reset();
-      wasLive = anyLive;
+      const allOff = [...slots.values()].every((s) => s.phase === 'off');
+      // 十路全部 off = HUD 已从所有机位消失，回合结束。此时立刻清空目标血量，
+      // 让血条回到未知初态；不能等下一回合出现 live，否则赛间会一直挂着旧值。
+      // 也不能用「没有 live」代替：全员阵亡时各路是 dead，HUD 与最终血量仍可信。
+      if (allOff) fusion.reset();
 
       if (objectiveReadings.length > 0) fusion.observe(objectiveReadings);
 

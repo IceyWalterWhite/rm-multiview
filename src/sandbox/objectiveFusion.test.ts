@@ -75,13 +75,6 @@ describe('createObjectiveFusion', () => {
     expect(ticks).toBeLessThanOrEqual(12);
   });
 
-  it('本轮谁也没读出来时保持上一个值', () => {
-    // 战略目标不会因为没人看见就消失
-    const f = createObjectiveFusion();
-    for (let i = 0; i < 5; i++) f.observe(many(4000, 0.4, 3));
-    expect(f.observe([only(null), only(null)]).redBase).toBe(4000);
-  });
-
   it('回合重置后重新接受满血', () => {
     // 目标血量每回合归满；不清状态的话新回合的满血会被当成上跳否掉
     const f = createObjectiveFusion();

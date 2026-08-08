@@ -58,6 +58,7 @@ function hpText(hp: number | null, maxHp: number | null, status: RobotStatus): s
 export function RobotPanel({
   viewId, name, team, hp, maxHp, status, pinned, hasSelection, onPin, onHoverChange, hostRef,
 }: RobotPanelProps) {
+  const displayName = name.replace(/第一视角$/, '');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasFrame, setHasFrame] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -111,12 +112,12 @@ export function RobotPanel({
         <div
           className="rp__card"
           role="dialog"
-          aria-label={`${name} 详情`}
+          aria-label={`${displayName} 详情`}
           onPointerEnter={() => onHoverChange(true)}
           onPointerLeave={() => onHoverChange(false)}
         >
           <div className="rp__head">
-            <span className="rp__name" title={name}>{name}</span>
+            <span className="rp__name" title={displayName}>{displayName}</span>
             <button
               type="button"
               className={`rp__pin${blocked ? ' is-off' : ''}`}

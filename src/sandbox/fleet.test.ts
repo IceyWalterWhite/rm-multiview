@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createFleet, rosterKey, type FleetMember } from './fleet';
 import { fixture } from './__fixtures__/load';
+import { readObjectives } from './objectives';
 import type { Frame } from '../vision/frame';
 
 const alive = () => fixture('B1Hero', 1400).frame; // 198/200，有标记
@@ -11,6 +12,18 @@ const blank = (): Frame => ({
   width: 852,
   height: 480,
 });
+
+/** 模拟官方阵亡效果：保留亮度与字形，只把整帧抽成灰度。 */
+const greyed = (frame: Frame): Frame => {
+  const data = new Uint8ClampedArray(frame.data);
+  for (let i = 0; i < data.length; i += 4) {
+    const y = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+    data[i] = y;
+    data[i + 1] = y;
+    data[i + 2] = y;
+  }
+  return { data, width: frame.width, height: frame.height };
+};
 
 const B1: FleetMember = { id: 'b1', team: 'blue', num: 1, kind: 'ground' };
 const B6: FleetMember = { id: 'b6', team: 'blue', num: 6, kind: 'drone' };
@@ -81,6 +94,25 @@ describe('createFleet', () => {
     expect(snap.robots[0].pose).not.toBeNull();
   });
 
+  it('阵亡灰化帧不应污染战略目标血量', () => {
+    const liveFrame = alive();
+    const greyFrame = greyed(liveFrame);
+
+    // 同一时刻、同一块 5000 记分板只做灰度化，OCR 就把蓝方基地截成了 5。
+    // blueOutpost=5 的置信度还高于融合门槛，若进入 fusion 会立刻污染空状态。
+    expect(readObjectives(liveFrame).blueBase).toMatchObject({ value: 5000, raw: '5000' });
+    expect(readObjectives(greyFrame).blueBase).toMatchObject({ value: 5, raw: '5' });
+    expect(readObjectives(greyFrame).blueOutpost).toMatchObject({ value: 5, raw: '5' });
+
+    const fleet = createFleet([B1]);
+    const before = fleet.observe(0, [{ id: 'b1', frame: liveFrame }]).objectives;
+    expect(before.blueBase).toBe(5000);
+    expect(before.blueOutpost).toBeNull();
+
+    const after = fleet.observe(1_000, [{ id: 'b1', frame: greyFrame }]).objectives;
+    expect(after).toEqual(before);
+  });
+
   it('空中路不读血量、也不判阵亡', () => {
     const fleet = createFleet([B6]);
     const snap = fleet.observe(0, [{ id: 'b6', frame: dead() }]);
@@ -88,19 +120,28 @@ describe('createFleet', () => {
     expect(snap.robots[0].status).not.toBe('dead');
   });
 
-  it('全场没有一路 live 时，目标血量的累积证据清零，好让新回合重新接受满血', () => {
-    // 战略目标每回合归满；不清的话新回合的满血会被单调约束当成上跳否掉
-    const fleet = createFleet([B1]);
-    fleet.observe(0, [{ id: 'b1', frame: alive() }]);
-    const before = fleet.snapshot.objectives;
-    // 十路全灭/全切走 → 回合结束
-    fleet.observe(1_000, [{ id: 'b1', frame: blank() }]);
-    expect(fleet.snapshot.live).toBe(0);
-    // 再次出现 live = 新回合开始，此时才 reset
-    fleet.observe(2_000, [{ id: 'b1', frame: alive() }]);
-    expect(fleet.snapshot.live).toBe(1);
-    // 断言的是「跨回合不会把旧值锁住」，而不是某个具体数值
-    expect(Object.keys(fleet.snapshot.objectives)).toEqual(Object.keys(before));
+  it('十路全部 off 时目标血量立即重置为初态', () => {
+    const members: FleetMember[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `ground-${i}`,
+      team: i < 5 ? 'red' : 'blue',
+      num: (i % 5) + 1,
+      kind: 'ground',
+    }));
+    const fleet = createFleet(members);
+    const liveSamples = members.map(({ id }) => ({ id, frame: alive() }));
+    const endedSamples = members.map(({ id }) => ({ id, frame: blank() }));
+
+    const during = fleet.observe(0, liveSamples);
+    expect(Object.values(during.objectives).some((hp) => hp !== null)).toBe(true);
+
+    const ended = fleet.observe(1_000, endedSamples);
+    expect(ended.withHud).toBe(0);
+    expect(ended.objectives).toEqual({
+      redBase: null,
+      redOutpost: null,
+      blueBase: null,
+      blueOutpost: null,
+    });
   });
 
   it('没被采到的路保持原状，不清空', () => {

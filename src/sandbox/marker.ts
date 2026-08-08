@@ -1,4 +1,4 @@
-import { MINIMAP, SELF_MARKER_GREEN, SELF_MARKER_MIN_AREA_RATIO } from '../rmui/layout';
+import { MINIMAP, SELF_MARKER_GREEN, SELF_MARKER_GREEN_VIGNETTE, SELF_MARKER_MIN_AREA_RATIO } from '../rmui/layout';
 import type { HsvRange } from '../vision/hsv';
 import type { NormRect } from '../vision/frame';
 import { distanceTransform, findBlobs } from '../vision/blob';
@@ -65,6 +65,30 @@ export function detectSelfMarker(
     radius: found.peak,
     area: found.area,
   };
+}
+
+/**
+ * 生产路径的检测：主窗交白卷时，用受击红晕的退化窗再试一次。
+ *
+ * 刻意做成两遍而不是直接把主窗放宽 —— 放宽会把绿标记与相邻青图标之间的低饱和
+ * 过渡带收进来，两团并合、质心被悄悄拽走（committed 夹具 B1Hero@1400 实测偏
+ * 0.0066，而浏览器那批数据的面积判据根本没抓到）。分成两遍之后，主窗命中的帧
+ * 逐位不变，放宽只作用在**本来就要返回 null** 的帧上：那里原本没有任何信息，
+ * 多一次尝试只可能改善。实测浏览器 138 个 HUD 帧从 112 收到 120，位移中位
+ * 3.40→3.35px 未退化。
+ *
+ * 代价是丢检帧多跑一遍掩码，而那一帧本来就没产出。实测浏览器现网 222 帧：
+ * 0.672 → 0.874 ms/帧（+30%），十路一轮多花约 2ms —— 比取像素本身便宜得多。
+ */
+export function detectSelfMarkerResilient(
+  frame: Frame,
+  roi: NormRect = MINIMAP,
+  minAreaRatio: number = SELF_MARKER_MIN_AREA_RATIO,
+): SelfMarker | null {
+  return (
+    detectSelfMarker(frame, roi, minAreaRatio, SELF_MARKER_GREEN) ??
+    detectSelfMarker(frame, roi, minAreaRatio, SELF_MARKER_GREEN_VIGNETTE)
+  );
 }
 
 interface Located {

@@ -69,6 +69,16 @@ export function groundPhase(s: PhaseSignals): StreamPhase {
 }
 
 /**
+ * 共享战略目标记分板是否仍可信。
+ *
+ * 不能直接写成 `phase === 'live'`：本机 0 血时可能仍是彩色 HUD，此时 phase 是 dead，
+ * 但顶部双方基地/前哨站数字仍正常。真正不可读的是 off（没有 HUD）和整体灰化的 dead。
+ */
+export function groundObjectivesReadable(s: PhaseSignals): boolean {
+  return hudPresent(s.lit) && s.sat >= DEAD_SCOREBOARD_SAT;
+}
+
+/**
  * 空中路自判。
  *
  * 空中路**没有任何 HUD** —— 没有血条、没有记分板，那两块 ROI 落在 FPV 画面本身
@@ -96,14 +106,19 @@ export function dronePhase(lit: number): StreamPhase {
 export function observePhase(
   frame: Frame,
   kind: StreamKind,
-): { phase: StreamPhase; hp: HpReading | null } {
+): { phase: StreamPhase; hp: HpReading | null; objectivesReadable: boolean } {
   const lit = scoreboardLit(frame);
   // 空中路的 hp 恒为 null，这是**定义**不是「还没读到」：空中机器人没有血量，
   // 那一路也没有血条。对它调 readHp 不是读不准，是问了一个不存在的问题 ——
   // 任何非 null 的返回都是凭空捏造。readHp 的格式校验目前恰好挡住了全部捏造
   // （实测 0%），但那是运气不是设计，所以在这里就不问。
-  if (kind === 'drone') return { phase: dronePhase(lit), hp: null };
-  if (!hudPresent(lit)) return { phase: 'off', hp: null };
+  if (kind === 'drone') return { phase: dronePhase(lit), hp: null, objectivesReadable: false };
+  if (!hudPresent(lit)) return { phase: 'off', hp: null, objectivesReadable: false };
   const hp = readHp(frame);
-  return { phase: groundPhase({ lit, sat: scoreboardSaturation(frame), hp }), hp };
+  const signals = { lit, sat: scoreboardSaturation(frame), hp };
+  return {
+    phase: groundPhase(signals),
+    hp,
+    objectivesReadable: groundObjectivesReadable(signals),
+  };
 }

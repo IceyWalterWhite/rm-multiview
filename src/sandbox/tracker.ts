@@ -7,7 +7,7 @@ import {
 } from '../rmui/layout';
 import type { Frame, NormRect } from '../vision/frame';
 import type { HpReading } from './hp';
-import { detectSelfMarker } from './marker';
+import { detectSelfMarkerResilient } from './marker';
 import { observePhase } from './streamPhase';
 import type { Hp, Pose, RobotState, StreamKind } from './types';
 
@@ -69,6 +69,7 @@ export function createRobotTracker(
   let hpAt = 0;
   let status: RobotState['status'] = 'unknown';
   let phase: RobotState['phase'] = 'off';
+  let objectivesReadable = false;
   /** 等待确认的新上限：连续读到 maxChangeAgreement 次才生效 */
   let pendingMax: { value: number; count: number } | null = null;
 
@@ -100,6 +101,7 @@ export function createRobotTracker(
       side,
       status,
       phase,
+      objectivesReadable,
       pose,
       poseAgeMs: pose ? nowMs - poseAt : Infinity,
       hp,
@@ -112,6 +114,7 @@ export function createRobotTracker(
       const observed = observePhase(frame, kind);
       const reading = observed.hp;
       phase = observed.phase;
+      objectivesReadable = observed.objectivesReadable;
 
       if (phase === 'off') {
         // 这一路本帧没有 HUD：过渡画面、转播镜头、回合间歇、信号中断。
@@ -132,7 +135,7 @@ export function createRobotTracker(
         return snapshot(nowMs);
       }
 
-      const marker = detectSelfMarker(frame, minimap, minAreaRatio);
+      const marker = detectSelfMarkerResilient(frame, minimap, minAreaRatio);
 
       if (!reading && !marker) {
         // HUD 在（或空中路没得判）却什么都没读到：遮挡、伤害泛光压低饱和、

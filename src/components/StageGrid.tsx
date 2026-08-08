@@ -321,7 +321,6 @@ export function StageGrid({
                   syncTier={source?.label ?? quality}
                 />
                 {syncEngine && <SyncBadge source={syncEngine} id={v.id} />}
-                <span className="sg-tile-name" aria-hidden="true">{v.role}</span>
               </div>
             );
           })}

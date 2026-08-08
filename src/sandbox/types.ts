@@ -44,6 +44,11 @@ export interface RobotState {
    * scoreboardLit / readHp —— 那是整条链路里最贵的两步。
    */
   phase: StreamPhase;
+  /**
+   * 这一路顶部共享记分板当前是否可信。独立于 phase：彩色 HUD 的 0 血阵亡是 dead，
+   * 但基地/前哨站仍可读；整体灰化的 dead 与没有 HUD 的 off 才不可读。
+   */
+  objectivesReadable: boolean;
   /** 最后一次可信位置；从未识别到则为 null。阵亡时保留不清空。 */
   pose: Pose | null;
   /** 该位置是多久之前测到的（ms）。UI 据此褪色。 */

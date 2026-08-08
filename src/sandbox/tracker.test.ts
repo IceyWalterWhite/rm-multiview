@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRobotTracker } from './tracker';
 import { isHudGreyedOut, scoreboardLit, scoreboardSaturation } from './alive';
-import { observePhase } from './streamPhase';
+import { groundObjectivesReadable, groundPhase, observePhase } from './streamPhase';
 import { fixture } from './__fixtures__/load';
 
 const alive = () => fixture('B1Hero', 1400).frame; // 198/200，有标记
@@ -52,6 +52,24 @@ describe('逐路自判', () => {
     expect(observePhase(lowHp(), 'ground').phase).toBe('live');
   });
 
+  it('彩色的 0 血阵亡仍可读取共享记分板，灰化阵亡不可读', () => {
+    const coloredDead = {
+      lit: 0.8,
+      sat: 0.5,
+      hp: { current: 0, max: 200, confidence: 1, raw: '0/200' },
+    };
+    expect(groundPhase(coloredDead)).toBe('dead');
+    expect(groundObjectivesReadable(coloredDead)).toBe(true);
+
+    const greyedDead = { lit: 0.8, sat: 0, hp: null };
+    expect(groundPhase(greyedDead)).toBe('dead');
+    expect(groundObjectivesReadable(greyedDead)).toBe(false);
+
+    const noHud = { lit: 1, sat: 0.5, hp: coloredDead.hp };
+    expect(groundPhase(noHud)).toBe('off');
+    expect(groundObjectivesReadable(noHud)).toBe(false);
+  });
+
   it('空中路永远判不出 dead —— 它没有血量', () => {
     // 刻意喂地面路的阵亡帧：交给 ground 判是 dead（见上），交给 drone 必须不是
     expect(observePhase(dead(), 'drone').phase).not.toBe('dead');
@@ -67,6 +85,7 @@ describe('createRobotTracker', () => {
     expect(s.hp).toEqual({ current: 198, max: 200 });
     expect(s.pose).not.toBeNull();
     expect(s.poseAgeMs).toBe(0);
+    expect(s.objectivesReadable).toBe(true);
   });
 
   it('never reports health or death for a drone — it has neither', () => {
@@ -89,6 +108,7 @@ describe('createRobotTracker', () => {
     expect(s.hp).toEqual({ current: 0, max: 200 }); // 上限沿用，当前记 0
     expect(s.pose).not.toBeNull(); // 坐标保留
     expect(s.poseAgeMs).toBe(1_000); // 但已经陈旧，UI 该褪色
+    expect(s.objectivesReadable).toBe(false); // 这份阵亡夹具是整体灰化 HUD
   });
 
   it('calls a blank frame unknown rather than dead', () => {
