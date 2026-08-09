@@ -90,7 +90,7 @@ html { scroll-snap-type: y proximity; }
 
 /* 不挂红蓝色边条：wings 里侧列本身就是按阵营分的，边条是那套分栏的延续；
    网格里十路混排，每格再镶一道彩边只是把画面切碎，阵营看机位名就够了 */
-.sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:transform .2s cubic-bezier(.2,0,0,1), box-shadow .15s ease, border-color .15s ease; }
+.sg-tile { position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#000; cursor:grab; padding:0; touch-action:none; transition:box-shadow .15s ease, border-color .15s ease; }
 .sg-tile:hover { box-shadow:0 0 0 1px var(--line-strong); }
 .sg-tile:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
 /* 选中 = 待替换的落点，要一眼看得出来，所以用 accent 描边而非淡淡的高亮 */
