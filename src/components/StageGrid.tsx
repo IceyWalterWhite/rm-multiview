@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { StreamView } from '../types';
 import type { QualityLabel } from '../config';
 import type { SyncEngine } from '../sync/engine';
@@ -13,6 +13,8 @@ import { prefersReducedMotion } from '../a11y';
 const SNAP_MS = 480;
 /** 竖条松手后保留缓动的时长，与 .3s 对齐 */
 const AXIS_EASE_MS = 320;
+/** 判定重排时，拖动中心沿目标方向需要走完的格中心距离比例。60% 灵敏但仍有回程滞回。 */
+const REORDER_PROGRESS = 0.6;
 /** 判定为拖动的位移阈值：低于它算点击，免得手抖把点选变成重排 */
 const DRAG_THRESHOLD = 10;
 
@@ -49,6 +51,50 @@ interface DragState {
   moved: boolean;
 }
 
+interface ReleaseState {
+  id: string;
+  /** 松手那一帧的视觉位移；下一 rAF 清空它，才会从真实当前位置连回 home */
+  transform: string;
+  playing: boolean;
+}
+
+/**
+ * 一次指针拖拽的手势会话。挂在 ref 里：事件回调不重建、不闭包过期。
+ *
+ * `currentOrder` 是**本次拖动**的顺序快照 —— 每次重排后立即更新，
+ * 于是同一次拖动里来回穿过同一**60% 投影门槛**时，顺序能立刻恢复（旧实现读 pointerdown
+ * 时的 order 闭包，回程时 `from === to` 直接不换，松手就跳回原格）。
+ */
+/** 一次手势冻结的网格度量：拖动期间坐标系不能随渲染期 plan 身份变化而漂 */
+interface DragGridMetrics {
+  cols: number;
+  tw: number;
+  th: number;
+  visible: number;
+}
+
+interface TileDragSession {
+  id: string;
+  pointerId: number;
+  tile: HTMLElement;
+  startX: number;
+  startY: number;
+  grabX: number;
+  grabY: number;
+  originX: number;
+  originY: number;
+  width: number;
+  height: number;
+  grid: DragGridMetrics;
+  currentOrder: string[];
+  x: number;
+  y: number;
+  moved: boolean;
+  frame: number | null;
+  /** 清理这次手势装上的 window 监听器；只由 finishTileDrag 调用 */
+  removeListeners?: () => void;
+}
+
 /**
  * 拖横条时用的排布：沿用静止态的列数与格子尺寸，只把行数补到装得下全部十格。
  *
@@ -67,7 +113,7 @@ function fillRows(rest: GridPlan, containerH: number): GridPlan {
 }
 
 /** 第 index 格在机位区里的落位（相对机位区左上角） */
-function tileHome(index: number, plan: GridPlan): { x: number; y: number } {
+function tileHome(index: number, plan: Pick<GridPlan, 'cols' | 'tw' | 'th'>): { x: number; y: number } {
   return {
     x: (index % plan.cols) * (plan.tw + GRID_GAP),
     y: Math.floor(index / plan.cols) * (plan.th + GRID_GAP),
@@ -81,6 +127,11 @@ export function StageGrid({
   const hostRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const tilesRef = useRef<HTMLDivElement>(null);
+  /** keyed 瓦片 DOM：FLIP 只读/写非拖动的现有节点，绝不复制视频 */
+  const tileNodes = useRef(new Map<string, HTMLDivElement>());
+  /** 每次重排提交前采的旧几何，给下一次 layout effect 反转 */
+  const flipFrom = useRef(new Map<string, DOMRect>());
+  const flipFrame = useRef<number | null>(null);
 
   const [leftPct, setLeftPct] = useState(50);
   const [topFrac, setTopFrac] = useState(0.5);
@@ -92,6 +143,11 @@ export function StageGrid({
   const [axis, setAxis] = useState<'x' | 'y' | null>(null);
   const [snapping, setSnapping] = useState(false);
   const [drag, setDrag] = useState<DragState | null>(null);
+  /** 普通松手的回位状态；与拖动中 1:1 transform、同级 FLIP 完全分开 */
+  const [release, setRelease] = useState<ReleaseState | null>(null);
+  const releaseFrame = useRef<number | null>(null);
+  /** 当前指针手势的会话（一次 pointerdown → pointerup/cancel）。事件侧永远读它，渲染侧读上面的 drag */
+  const dragSession = useRef<TileDragSession | null>(null);
 
   const timers = useRef<{ axis?: ReturnType<typeof setTimeout>; snap?: ReturnType<typeof setTimeout> }>({});
   useEffect(() => {
@@ -123,6 +179,53 @@ export function StageGrid({
   const areaH = plan.need;
   const cursorH = dragFrac !== null ? rc.h * dragFrac : null;
   const reduced = prefersReducedMotion();
+
+  /** 在 React 改变 order 前记住旧格位；layout effect 再把它反转成视觉连续的 FLIP。 */
+  const captureFlip = useCallback((dragId: string) => {
+    if (reduced) return;
+    const previous = new Map<string, DOMRect>();
+    tileNodes.current.forEach((node, id) => {
+      if (id !== dragId) previous.set(id, node.getBoundingClientRect());
+    });
+    flipFrom.current = previous;
+  }, [reduced]);
+
+  // Grid 重排本身没有可补间的 transform。这里在浏览器绘制新格位前先反向平移，
+  // 再下一帧清掉 transform；于是只有非拖动格以精确的 GPU transform 连续让位。
+  useLayoutEffect(() => {
+    if (reduced || flipFrom.current.size === 0) return;
+    if (flipFrame.current !== null) cancelAnimationFrame(flipFrame.current);
+
+    const animated: HTMLDivElement[] = [];
+    flipFrom.current.forEach((before, id) => {
+      const node = tileNodes.current.get(id);
+      if (!node) return;
+      const after = node.getBoundingClientRect();
+      const dx = before.left - after.left;
+      const dy = before.top - after.top;
+      if (dx === 0 && dy === 0) return;
+      node.style.transition = 'none';
+      node.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      // 强制提交反向起点。只读本节点，避免重算整个网格的样式。
+      node.getBoundingClientRect();
+      animated.push(node);
+    });
+    flipFrom.current.clear();
+    if (animated.length === 0) return;
+
+    flipFrame.current = requestAnimationFrame(() => {
+      flipFrame.current = null;
+      animated.forEach((node) => {
+        node.style.transition = 'transform 180ms cubic-bezier(0.77, 0, 0.175, 1)';
+        node.style.transform = '';
+      });
+    });
+  }, [order, reduced]);
+
+  useEffect(() => () => {
+    if (flipFrame.current !== null) cancelAnimationFrame(flipFrame.current);
+    if (releaseFrame.current !== null) cancelAnimationFrame(releaseFrame.current);
+  }, []);
 
   // ---- 分隔条拖动 ----
   const startSepDrag = useCallback((e: ReactPointerEvent, which: 'x' | 'y') => {
@@ -174,47 +277,189 @@ export function StageGrid({
   }, [lock, rc.w, rc.h, topFrac, reduced]);
 
   // ---- 格子：点选 + 拖动重排 ----
-  const startTileDrag = useCallback((e: ReactPointerEvent, id: string) => {
+  /** 把 rAF 待处理状态落掉：以最新坐标更新渲染、检查中心阈值、必要时重排 */
+  const processTileDrag = useCallback((session: TileDragSession) => {
+    session.frame = null;
+
+    // 离起点距离先过拖动阈值，才从「点选手势」升级成「拖动手势」。
+    // 阈值判定放在 rAF 里做，避免每个 pointermove 都写一次 React state。
+    if (!session.moved) {
+      const far = Math.abs(session.x - session.startX) + Math.abs(session.y - session.startY) > DRAG_THRESHOLD;
+      if (!far) return;
+      session.moved = true;
+      // 越过阈值才 capture：没拖起来的手势不抢指针，点选/取消照常
+      try {
+        session.tile.setPointerCapture(session.pointerId);
+      } catch {
+        // 极少数浏览器会在指针已释放时报错；拖拽照常继续，只是不 capture
+      }
+    }
+
+    // 拖动瓦片的视觉中心（指针 − 抓取偏移 + 半格）。后续按它在
+    // 当前格→目标格方向上的 60% 投影判定换位，避免刚进格边缘就抖动。
+    const centerX = session.x - session.grabX + session.width / 2;
+    const centerY = session.y - session.grabY + session.height / 2;
+
+    // 不是刚进目标格就插入：从当前 home 往指针中心画一条向量，只有那条向量
+    // 穿过另一格的**中心垂线**才把它视为落点。横向从 A→B 时要跨过 B 的中心，
+    // 而不是跨过两格中点；调头时同一公式会跨回 B 新位置的中心。
+    const from = session.currentOrder.indexOf(session.id);
+    const visible = session.currentOrder.slice(0, session.grid.visible);
+    const ownHome = tileHome(from, session.grid);
+    const ownCenterX = session.originX + ownHome.x + session.grid.tw / 2;
+    const ownCenterY = session.originY + ownHome.y + session.grid.th / 2;
+    const travelX = centerX - ownCenterX;
+    const travelY = centerY - ownCenterY;
+    const crossed = visible
+      .map((candidate, index) => {
+        if (candidate === session.id) return null;
+        const home = tileHome(index, session.grid);
+        const targetCenterX = session.originX + home.x + session.grid.tw / 2;
+        const targetCenterY = session.originY + home.y + session.grid.th / 2;
+        const targetX = targetCenterX - ownCenterX;
+        const targetY = targetCenterY - ownCenterY;
+        const targetLengthSq = targetX ** 2 + targetY ** 2;
+        // 投影达到目标中心距离的 60% 才交换。换位后 ownCenter 已落到对面，
+        // 反向也要走 60%，故两阈值之间天然留下 20% 格距的滞回稳定区。
+        const progress = travelX * targetX + travelY * targetY;
+        if (progress < targetLengthSq * REORDER_PROGRESS) return null;
+        return { index, distance: (centerX - targetCenterX) ** 2 + (centerY - targetCenterY) ** 2 };
+      })
+      .filter((candidate): candidate is { index: number; distance: number } => candidate !== null);
+    const to = crossed.reduce<{ index: number; distance: number } | null>(
+      (closest, candidate) => !closest || candidate.distance < closest.distance ? candidate : closest,
+      null,
+    )?.index;
+    if (from !== -1 && to !== undefined && to !== from) {
+      const next = move(session.currentOrder, from, to);
+      captureFlip(session.id);
+      // 先更新会话内顺序再通知上层：同一次拖动里的后续移动都基于最新顺序，
+      // 来回拖才不会把旧位置当成当前位。
+      session.currentOrder = next;
+      onReorder(next);
+    }
+
+    // 拖动瓦片 1:1 跟手：只在状态里放最新坐标，由渲染期的 transform 绘制
+    setDrag({
+      id: session.id,
+      grabX: session.grabX,
+      grabY: session.grabY,
+      originX: session.originX,
+      originY: session.originY,
+      x: session.x,
+      y: session.y,
+      moved: true,
+    });
+  }, [onReorder, captureFlip]);
+
+  /**
+   * 普通松手才回位：先保留松手那一帧的 translate3d，下一帧清空 transform，
+   * 让浏览器从实际手指位置以 transform-only 动画回到 Grid home。取消操作立即清掉，
+   * 不制造用户没有完成的动作的动画反馈。
+   */
+  const startRelease = useCallback((session: TileDragSession) => {
+    if (!session.moved || reduced) return;
+    const from = session.currentOrder.indexOf(session.id);
+    if (from === -1) return;
+    const home = tileHome(from, session.grid);
+    const transform = `translate3d(${session.x - session.grabX - session.originX - home.x}px, ${session.y - session.grabY - session.originY - home.y}px, 0)`;
+    setRelease({ id: session.id, transform, playing: false });
+    releaseFrame.current = requestAnimationFrame(() => {
+      releaseFrame.current = null;
+      setRelease((current) => current?.id === session.id ? { ...current, playing: true } : current);
+    });
+  }, [reduced]);
+
+  /** 统一收尾：pointerup / pointercancel / 卸载共用，保证不留半截状态 */
+  const finishTileDrag = useCallback((cancelled: boolean) => {
+    const session = dragSession.current;
+    dragSession.current = null;
+    if (!session) return;
+    if (session.frame !== null) cancelAnimationFrame(session.frame);
+    session.removeListeners?.();
+    try {
+      if (session.tile.hasPointerCapture?.(session.pointerId)) {
+        session.tile.releasePointerCapture(session.pointerId);
+      }
+    } catch {
+      // capture 可能已被系统释放；释放失败不影响拖拽结束
+    }
+    setDrag(null);
+    if (!cancelled) startRelease(session);
+    if (cancelled) setRelease(null);
+    if (!cancelled && !session.moved) {
+      // 没拖动过就是一次点选；再点同一个取消选中
+      onSelect(selected === session.id ? null : session.id);
+    }
+  }, [selected, onSelect, startRelease]);
+
+  function startTileDrag(e: ReactPointerEvent, id: string) {
     if (e.button !== 0) return;
     const tiles = tilesRef.current;
-    if (!tiles) return;
+    if (!tiles || dragSession.current) return;
     const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const host = tiles.getBoundingClientRect();
-    let st: DragState = {
+    const session: TileDragSession = {
       id,
+      pointerId: e.pointerId,
+      tile: e.currentTarget as HTMLElement,
+      startX: e.clientX,
+      startY: e.clientY,
       grabX: e.clientX - box.left,
       grabY: e.clientY - box.top,
       originX: host.left,
       originY: host.top,
+      width: box.width,
+      height: box.height,
+      grid: { cols: plan.cols, tw: plan.tw, th: plan.th, visible: plan.visible },
+      currentOrder: order,
       x: e.clientX,
       y: e.clientY,
       moved: false,
+      frame: null,
     };
-    setDrag(st);
+    dragSession.current = session;
 
     const onMove = (ev: PointerEvent) => {
-      const far = Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) > DRAG_THRESHOLD;
-      st = { ...st, x: ev.clientX, y: ev.clientY, moved: st.moved || far };
-      setDrag(st);
-      if (!st.moved) return;
-      // 其他格子实时让位：过了阈值就立刻改顺序，不等松手
-      const col = Math.floor((ev.clientX - st.originX) / (plan.tw + GRID_GAP));
-      const row = Math.floor((ev.clientY - st.originY) / (plan.th + GRID_GAP));
-      if (col < 0 || col >= plan.cols || row < 0) return;
-      const to = row * plan.cols + col;
-      const from = order.indexOf(id);
-      if (from !== -1 && to !== from && to >= 0 && to < order.length) onReorder(move(order, from, to));
+      const s = dragSession.current;
+      if (!s || ev.pointerId !== s.pointerId) return;
+      s.x = ev.clientX;
+      s.y = ev.clientY;
+      // 每帧最多一次处理：pointer 事件经常 120/240Hz 地来，没必要逐个都触发
+      // React 更新 + 几何计算。
+      if (s.frame === null) {
+        s.frame = requestAnimationFrame(() => processTileDrag(s));
+      }
     };
-    const onUp = () => {
+    const onUp = (ev: PointerEvent) => {
+      const s = dragSession.current;
+      if (s && ev.pointerId === s.pointerId) finishTileDrag(false);
+    };
+    const onCancel = (ev: PointerEvent) => {
+      const s = dragSession.current;
+      if (s && ev.pointerId === s.pointerId) finishTileDrag(true);
+    };
+    session.removeListeners = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      // 没拖动过就是一次点选；再点同一个取消选中
-      if (!st.moved) onSelect(selected === id ? null : id);
-      setDrag(null);
+      window.removeEventListener('pointercancel', onCancel);
     };
+
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
-  }, [plan.tw, plan.th, plan.cols, order, onReorder, onSelect, selected]);
+    window.addEventListener('pointercancel', onCancel);
+  }
+
+  // 卸载时兜底收尾：拖动到一半切换布局/切页，不能让监听器与 capture 留着。
+  // 注意不把 finishTileDrag 当依赖：它因 selected 变化会重建，若依赖它就会在
+  // 父组件响应 onReorder 的 re-render 后错误终止仍在进行的拖动。
+  useEffect(() => () => {
+    const session = dragSession.current;
+    if (!session) return;
+    if (session.frame !== null) cancelAnimationFrame(session.frame);
+    session.removeListeners?.();
+    dragSession.current = null;
+  }, []);
 
   // Esc 取消选中 —— 任何状态都要有键盘退路。对话框开着时 Esc 属于对话框，不越权抢
   useEffect(() => {
@@ -282,6 +527,7 @@ export function StageGrid({
             const v = byId.get(id);
             if (!v) return null;
             const dragging = drag?.id === id && drag.moved;
+            const releasing = release?.id === id;
             const source = sourceForQuality(v, quality);
             let style: CSSProperties | undefined;
             if (dragging && drag) {
@@ -290,9 +536,13 @@ export function StageGrid({
               const home = tileHome(index, plan);
               style = {
                 ...style,
-                transform: `translate(${drag.x - drag.grabX - drag.originX - home.x}px, ${drag.y - drag.grabY - drag.originY - home.y}px)`,
+                transform: `translate3d(${drag.x - drag.grabX - drag.originX - home.x}px, ${drag.y - drag.grabY - drag.originY - home.y}px, 0)`,
                 transition: 'none',
               };
+            } else if (releasing && release) {
+              style = release.playing
+                ? { transition: 'transform 180ms cubic-bezier(0.77, 0, 0.175, 1)' }
+                : { transform: release.transform, transition: 'none' };
             }
             return (
               <div
@@ -304,8 +554,15 @@ export function StageGrid({
                 aria-pressed={selected === id}
                 aria-label={v.role}
                 title={v.role}
+                ref={(node) => {
+                  if (node) tileNodes.current.set(id, node);
+                  else tileNodes.current.delete(id);
+                }}
                 style={style}
                 onPointerDown={(e) => startTileDrag(e, id)}
+                onTransitionEnd={(e) => {
+                  if (releasing && release?.playing && e.propertyName === 'transform') setRelease(null);
+                }}
                 onKeyDown={(e) => {
                   if (e.key !== 'Enter' && e.key !== ' ') return;
                   e.preventDefault();
