@@ -102,6 +102,8 @@ export function LiveStage(p: Props) {
     return Number.isFinite(v) ? Math.max(-5, Math.min(5, v)) : 0;
   });
   const handleTrim = useCallback((sec: number) => setSyncTrim(sec), []);
+  // 成功测出的路原子更新；本轮无可靠峰的路继续沿用元数据完全匹配的旧实测值。
+  const handleRecalibrate = useCallback(() => calibrator.calibrate(), [calibrator]);
   useEffect(() => {
     syncEngine.setTrim(syncTrim);
     localStorage.setItem(TRIM_KEY, String(syncTrim));
@@ -240,7 +242,7 @@ export function LiveStage(p: Props) {
   };
 
   const mainStage = (
-    <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
+    <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} onPlayingChange={p.onMainPlayingChange} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} onRecalibrate={handleRecalibrate} />
   );
 
   // B 站式：弹幕开关放输入条内（同一个框），避免两个不等高的框并排

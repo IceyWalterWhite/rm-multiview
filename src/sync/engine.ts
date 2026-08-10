@@ -13,9 +13,17 @@ export interface SyncMedia {
 export interface StreamHandle {
   video: SyncMedia;
   isMain: boolean;
-  /** 清晰度档（'1080p' | '720p' | '540p'），决定 δ 的 tier 先验 */
+  /** 实际播放源的清晰度档；用于选择完全匹配的实测 offset */
   tier: string;
 }
+
+export interface OffsetMetadata {
+  mainRef: string;
+  sideTier: string;
+}
+
+/** 主视角身份 → 侧路 ID → 侧路分辨率 → 实测 offset */
+export type OffsetProfiles = Record<string, Record<string, Record<string, number>>>;
 
 export interface StreamStatus {
   /** wall − target − trim（秒）；无法测量时 null */
@@ -32,9 +40,6 @@ export type ByteSink = (
 
 const OFF_STATUS: StreamStatus = { error: null, mode: 'off' };
 
-// 2026-08-01 实测：540p 转码管线名字钟晚标 3.94s（跨视角一致的全局常量）。
-// 720p 同为 5s 分片转码流，先验沿用同值，运行时校准（audioCalib）可精修。
-export const TIER_PRIOR: Record<string, number> = { '1080p': 0, '720p': 3.94, '540p': 3.94 };
 const MAX_SAMPLES = 8;
 const TICK_MS = 1000;
 
@@ -52,7 +57,8 @@ export class SyncEngine {
   private streams = new Map<string, StreamState>();
   private enabled = true;
   private trim = 0;
-  private viewDelta = new Map<string, number>();
+  /** 仅保存实测值；按主视角身份、侧路 ID、侧路分辨率三层索引 */
+  private offsets = new Map<string, Map<string, Map<string, number>>>();
   private listeners = new Set<(s: Map<string, StreamStatus>) => void>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private byteSink: ByteSink | null = null;
@@ -83,16 +89,59 @@ export class SyncEngine {
   setEnabled(on: boolean): void {
     if (this.enabled === on) return;
     this.enabled = on;
-    if (!on) for (const st of this.streams.values()) this.resetStream(st);
+    if (on) return;
+    for (const st of this.streams.values()) this.resetStream(st);
+    // 关掉后 tick 直接 return，statusCache 会冻结在最后一帧——角标订阅的正是它，
+    // 不清就会永远定格在关闭那一刻的读数。清空 + 通知，让各路回落到 off。
+    if (this.statusCache.size === 0) return;
+    this.statusCache.clear();
+    for (const fn of this.changeListeners) fn();
   }
 
   setTrim(sec: number): void {
     this.trim = sec;
   }
 
-  /** 音频校准写入的 view 常量（叠加在 tier 先验上） */
-  setDelta(id: string, sec: number): void {
-    this.viewDelta.set(id, sec);
+  /** 写入一条完整元数据匹配的实测 offset；不存在任何先验或默认值。 */
+  setOffset(id: string, sec: number, meta: OffsetMetadata): void {
+    let byStream = this.offsets.get(meta.mainRef);
+    if (!byStream) {
+      byStream = new Map();
+      this.offsets.set(meta.mainRef, byStream);
+    }
+    let byTier = byStream.get(id);
+    if (!byTier) {
+      byTier = new Map();
+      byStream.set(id, byTier);
+    }
+    byTier.set(meta.sideTier, sec);
+  }
+
+  /** 只返回与当前主视角和当前侧路分辨率完全匹配的实测值。 */
+  offsetOf(id: string): number | undefined {
+    const ref = this.mainRef();
+    const st = this.streams.get(id);
+    if (ref === null || !st || st.handle.isMain) return undefined;
+    return this.offsets.get(ref)?.get(id)?.get(st.handle.tier);
+  }
+
+  /** 当前主视角的 ID + 实际播放分辨率，构成 offset 的主参照元数据。 */
+  mainRef(): string | null {
+    for (const [id, st] of this.streams) {
+      if (st.handle.isMain) return `${id}|${st.handle.tier}`;
+    }
+    return null;
+  }
+
+  /** 构造期可先恢复全部 profile；真正使用时由 offsetOf 按当前元数据选择。 */
+  restoreOffsets(profiles: OffsetProfiles): void {
+    for (const [mainRef, byStream] of Object.entries(profiles)) {
+      for (const [id, byTier] of Object.entries(byStream)) {
+        for (const [sideTier, sec] of Object.entries(byTier)) {
+          if (Number.isFinite(sec)) this.setOffset(id, sec, { mainRef, sideTier });
+        }
+      }
+    }
   }
 
   /** tee 下来的分片字节的去向（audioCalib 的 ingest 胶水） */
@@ -155,7 +204,8 @@ export class SyncEngine {
     let target: number | null = null;
     for (const [id, st] of this.streams) {
       if (!st.handle.isMain) continue;
-      const wall = this.wallOf(id, st);
+      // 主视角是基准：偏移恒为 0，它自己永不被调整
+      const wall = this.wallOf(st, 0);
       if (wall !== null && !st.handle.video.paused) target = wall;
       statuses.set(id, { error: null, mode: wall === null ? 'off' : 'synced' });
       break;
@@ -164,7 +214,14 @@ export class SyncEngine {
     for (const [id, st] of this.streams) {
       if (st.handle.isMain) continue;
       const v = st.handle.video;
-      const wall = this.wallOf(id, st);
+      const offset = this.offsetOf(id);
+      // 没有与当前元数据匹配的实测 offset，就不参与同步。猜测会制造不可验证的 seek。
+      if (offset === undefined) {
+        this.resetStream(st);
+        statuses.set(id, { error: null, mode: 'off' });
+        continue;
+      }
+      const wall = this.wallOf(st, offset);
       if (target === null || wall === null || v.paused) {
         statuses.set(id, { error: null, mode: 'off' });
         continue;
@@ -220,11 +277,15 @@ export class SyncEngine {
     for (const fn of this.listeners) fn(statuses);
   }
 
-  private wallOf(id: string, st: StreamState): number | null {
+  /**
+   * 把播放位置换算成「内容时刻」，单位与分片名的 unix 秒同域。
+   * offset = 这一路的名字钟比主视角快多少秒（主视角自己传 0）。
+   * 同步只需要相对量，所以主视角的绝对管线延迟无须知道，也无从知道。
+   */
+  private wallOf(st: StreamState, offset: number): number | null {
     const epoch = estimateEpoch(st.samples);
     if (epoch === null) return null;
-    const delta = (TIER_PRIOR[st.handle.tier] ?? 0) + (this.viewDelta.get(id) ?? 0);
-    return epoch + st.handle.video.currentTime - delta;
+    return epoch + st.handle.video.currentTime - offset;
   }
 
   private resetStream(st: StreamState): void {

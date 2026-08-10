@@ -1,4 +1,4 @@
-import { TIER_PRIOR, type SyncEngine } from './engine';
+import { type OffsetProfiles, type SyncEngine } from './engine';
 import { crossCorrelate } from './xcorr';
 
 // 音频互相关校准器：比赛进行时各路共享主视角音频，用 tee 下来的分片音频
@@ -48,10 +48,16 @@ interface StreamBuf {
 // 同一节目的不同混音在波形级相关性很低（离线实测过不了峰值门限），
 // 能量包络则强相关（实测 r≈0.4、单峰无歧义）。500Hz 包络的峰定位精度 ~±0.05s，绰绰有余。
 const CAL_SR = 500;
-const WINDOW_SEC = 20; // 每次校准取的窗口长度
+// 30s 而非 20s：各 FPV 是独立拾音（2026-08-06 实测 004↔005 直接对测 peak 仅 0.45），
+// 包络里可相关的只有场馆公共声音，占比低的路（弱拾音）峰高塌、锐度过不了门限。
+// 窗口加长是唯一不动门限就能提 SNR 的路（×√1.5）——门限绝不能松，弱峰收进来就是错值入库。
+// 代价只是每轮素材要攒 30s（BUF_SPAN_SEC 40 装得下），校准慢一点，准比快重要。
+const WINDOW_SEC = 30;
 const BUF_SPAN_SEC = 40; // 环形缓冲保留跨度
 const MAX_SEARCH_SEC = 8; // δ 差搜索半径（实测 ≤4.4s，留裕量）
-const STORE_KEY = 'rm.sync.viewDelta.v1';
+// v3 把主视角 ID/分辨率与侧视角 ID/分辨率全部写进 profile key。
+// v2 缺少侧路分辨率，无法判断旧值是否适用于当前实际播放源，不能迁移。
+const STORE_KEY = 'rm.sync.offset.v3';
 const CAL_INTERVAL_MS = 60_000;
 // 开赛探针：比赛时各路共享主视角音频，赛间 FPV 是**数字静音**——
 // 2026-08-04 现网实测采样值恒为 0（peak 严格 0，非低电平），出声段包络 rms ≈0.05。
@@ -104,6 +110,12 @@ interface Assembled {
   startWall: number;
 }
 
+/** localStorage 只保存当天的完整实测 profile；没有默认值。 */
+interface Stored {
+  date?: string;
+  profiles?: OffsetProfiles;
+}
+
 export class AudioCalibrator {
   private engine: SyncEngine;
   private decode: DecodeFn;
@@ -149,8 +161,13 @@ export class AudioCalibrator {
       const main = await this.assemble(mainBuf);
       if (!main) return 0;
 
+      // 全程相对主视角测量，主视角身份就是这批数的参照系。assemble 要 await 解码，
+      // 期间用户完全可能换档/换主视角——开头锁定，写入前复查，不一致整轮丢弃。
+      const ref = this.engine.mainRef();
+      if (ref === null) return 0;
+
       let ok = 0;
-      const saved: Record<string, number> = {};
+      const saved: Record<string, { offset: number; sideTier: string }> = {};
       for (const [id, buf] of this.streams) {
         if (buf.isMain || buf.entries.length === 0) continue;
         const side = await this.assemble(buf);
@@ -164,15 +181,20 @@ export class AudioCalibrator {
           MAX_SEARCH_SEC + Math.min(15, Math.abs(baseOffset)),
         );
         if (!r) continue;
-        const deltaDiff = r.lagSec + baseOffset;
-        // 因子分解：view = (δ_side − δ_main) − (tier_side − tier_main)；主视角 view ≡ 0 为参考系
-        const view =
-          deltaDiff - ((TIER_PRIOR[buf.tier] ?? 0) - (TIER_PRIOR[mainBuf.tier] ?? 0));
-        this.engine.setDelta(id, view);
-        saved[id] = view;
+        // 这就是最终答案：这一路相对主视角错开多少秒。
+        // 不再拆成「档位常量 + 每路残差」——拆完用的时候还要拼回去，净效果为零，
+        // 反而让存档绑死在档位常量上（常量一改，旧存档全部失准）。
+        const offset = r.lagSec + baseOffset;
+        saved[id] = { offset, sideTier: buf.tier };
         ok++;
       }
-      if (ok > 0) this.persist(saved);
+      if (ok === 0) return 0;
+      // 复查：换过参照系的话这批数除了误导控制器没有任何用处，直接扔
+      if (this.engine.mainRef() !== ref) return 0;
+      for (const [id, value] of Object.entries(saved)) {
+        this.engine.setOffset(id, value.offset, { mainRef: ref, sideTier: value.sideTier });
+      }
+      this.persist(saved, ref);
       return ok;
     } finally {
       this.calibrating = false;
@@ -275,26 +297,33 @@ export class AudioCalibrator {
     try {
       const raw = this.storage.getItem(STORE_KEY);
       if (!raw) return;
-      const data = JSON.parse(raw) as { date?: string; view?: Record<string, number> };
-      if (data.date !== this.today() || !data.view) return;
-      for (const [id, v] of Object.entries(data.view)) {
-        if (typeof v === 'number' && Number.isFinite(v)) this.engine.setDelta(id, v);
-      }
+      const data = JSON.parse(raw) as Stored;
+      if (data.date !== this.today() || !data.profiles) return;
+      this.engine.restoreOffsets(data.profiles);
     } catch {
       // 损坏的缓存直接忽略
     }
   }
 
-  private persist(updates: Record<string, number>): void {
+  private persist(
+    updates: Record<string, { offset: number; sideTier: string }>,
+    mainRef: string,
+  ): void {
     if (!this.storage) return;
     try {
       const raw = this.storage.getItem(STORE_KEY);
-      const prev = raw ? (JSON.parse(raw) as { date?: string; view?: Record<string, number> }) : {};
-      const view = prev.date === this.today() && prev.view ? prev.view : {};
-      Object.assign(view, updates);
-      this.storage.setItem(STORE_KEY, JSON.stringify({ date: this.today(), view }));
+      const prev = raw ? (JSON.parse(raw) as Stored) : {};
+      const profiles: OffsetProfiles = prev.date === this.today() && prev.profiles
+        ? structuredClone(prev.profiles)
+        : {};
+      const byStream = profiles[mainRef] ??= {};
+      for (const [id, value] of Object.entries(updates)) {
+        const byTier = byStream[id] ??= {};
+        byTier[value.sideTier] = value.offset;
+      }
+      this.storage.setItem(STORE_KEY, JSON.stringify({ date: this.today(), profiles }));
     } catch {
-      // 存不进就算了：内存里的 δ 仍然生效
+      // 存不进就算了：内存里的偏移仍然生效
     }
   }
 }

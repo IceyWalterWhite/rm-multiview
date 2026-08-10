@@ -23,8 +23,8 @@ describe('sourceForQuality', () => {
   it('returns the whole source so callers can read the REAL tier label', () => {
     expect(sourceForQuality(view, '540p')).toEqual({ label: '540p', src: 'c.m3u8', res: '960x540' });
   });
-  it('falls back with the fallback source own label (缺档回退时 tier 先验必须跟着源走)', () => {
-    // 请求 720p 回退到 1080p 源：label 必须是 1080p，否则时码同步套错 tier 常量
+  it('falls back with the fallback source own label (缺档回退时 offset metadata 必须跟着实际源走)', () => {
+    // 请求 720p 回退到 1080p 源：label 必须是 1080p，否则会误用不匹配的实测 offset
     expect(sourceForQuality(view, '720p')?.label).toBe('1080p');
   });
   it('returns undefined for a view without sources', () => {

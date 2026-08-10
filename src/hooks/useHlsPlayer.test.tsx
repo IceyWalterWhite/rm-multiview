@@ -91,11 +91,12 @@ function Harness({
   sync?: SyncBinding;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const { error } = useHlsPlayer(ref, src, onExpired, { keepAliveWhenHidden, sync });
+  const { error, starting } = useHlsPlayer(ref, src, onExpired, { keepAliveWhenHidden, sync });
   return (
     <>
       <video data-testid="video" ref={ref} />
       <span data-testid="state">{error ? 'error' : 'ok'}</span>
+      <span data-testid="starting">{starting ? 'starting' : 'idle'}</span>
     </>
   );
 }
@@ -445,5 +446,231 @@ describe('useHlsPlayer — 原生 HLS 兜底路径的断线自愈', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     act(() => { video.dispatchEvent(new Event('playing')); });
     expect(screen.getByTestId('state')).toHaveTextContent('ok');
+  });
+});
+
+// 2026-08-06 现网定案的「主视角起播空等 6 秒」。HLS_CONFIG.liveSyncDuration:12 只有侧路吃得下：
+// hls.js 按 playlist 总时长截断（dist/hls.js:33761 `min = edge − totalduration`），主视角 3 片×2s
+// 当场砍成 6，侧路 3 片×5s 毫发无伤——配置层先天差 6 秒。同步再按 offset 把侧路推近直播边缘后
+// 存货只剩 2.3s，而侧路分片是 5s 一个 → 触底断粮 → 变速档越追越亏的病态极限环（实测 64.5 次/分，
+// 主视角 0 次）。空等把主视角落后量补到 ~13.5s，侧路目标随之 ~9s > 5s 分片周期，存货才经得起推。
+describe('useHlsPlayer — 主视角起播前的 6 秒空等', () => {
+  let playSpy: ReturnType<typeof vi.spyOn>;
+  let pauseSpy: ReturnType<typeof vi.spyOn>;
+
+  const mainSync = (): SyncBinding =>
+    ({ engine: new SyncEngine(), id: 'main', isMain: true, tier: '1080p' });
+
+  beforeEach(() => {
+    hlsMock.instances.length = 0;
+    setVisibility('visible');
+    playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve());
+    pauseSpy = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers(); // 假时钟绝不能漏给同文件其它用例
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the main stream silent until the 6s are up, MANIFEST_PARSED notwithstanding', async () => {
+    render(<Harness sync={mainSync()} />);
+    const hls = await getHls();
+    const video = screen.getByTestId('video');
+
+    // 清单解析完就开播 = 白等，落后量当场缩回 6 秒
+    act(() => { hls.emit(hlsMock.MockHls.Events.MANIFEST_PARSED); });
+    expect(playSpy).not.toHaveBeenCalled();
+
+    act(() => { video.dispatchEvent(new Event('canplay')); }); // 计时从「本该开播的那一刻」起算
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_999); });
+    expect(playSpy).not.toHaveBeenCalled(); // 差一毫秒都不放行
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(playSpy).toHaveBeenCalled();
+  });
+
+  it('pushes <video autoPlay> back down when it starts on its own, without restarting the clock', async () => {
+    render(<Harness sync={mainSync()} />);
+    await getHls();
+    const video = screen.getByTestId('video');
+    pauseSpy.mockClear();
+
+    // autoPlay 会在数据就绪时自作主张开播，「不主动调 play()」拦不住它
+    act(() => { video.dispatchEvent(new Event('play')); });
+    expect(pauseSpy).toHaveBeenCalled();
+    expect(playSpy).not.toHaveBeenCalled();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    act(() => { video.dispatchEvent(new Event('play')); }); // 中途又偷跑一次
+    expect(playSpy).not.toHaveBeenCalled();
+
+    // 偷跑不该把计时器推倒重来：起点后满 6 秒即放行，一次
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+    expect(playSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the clock on canplay alone when autoplay is denied and play never fires', async () => {
+    // 主视角的 muted 由外部传入：未静音时浏览器自动播放策略可能直接拒绝，play 事件永不触发。
+    // 只认 play 的话定时器永远起不来，主视角就是一块永久黑屏。
+    playSpy.mockImplementation(() => Promise.reject(new Error('NotAllowedError')));
+    render(<Harness sync={mainSync()} />);
+    await getHls();
+    const video = screen.getByTestId('video');
+
+    act(() => { video.dispatchEvent(new Event('canplay')); });
+    expect(playSpy).not.toHaveBeenCalled();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+    expect(playSpy).toHaveBeenCalled(); // 被拒的 play 由 playVideo 吞掉，不该冒成未处理拒绝
+  });
+
+  it('never delays a side stream — its 8s buffer could not survive another 6s of lag', async () => {
+    const engine = new SyncEngine();
+    render(<Harness sync={{ engine, id: 'side', isMain: false, tier: '540p' }} />);
+    const hls = await getHls();
+    const video = screen.getByTestId('video');
+
+    act(() => { hls.emit(hlsMock.MockHls.Events.MANIFEST_PARSED); });
+    expect(playSpy).toHaveBeenCalled();
+    expect(screen.getByTestId('starting')).toHaveTextContent('idle');
+
+    // 侧路本就起播在 edge−12，再退 6 秒同步得往前推 9 秒，而 maxBufferLength:8 让它跳不回来
+    act(() => { video.dispatchEvent(new Event('play')); });
+    expect(pauseSpy).not.toHaveBeenCalled();
+  });
+
+  it('plays straight away when there is no sync binding to delay for', async () => {
+    render(<Harness />);
+    const hls = await getHls();
+
+    act(() => { hls.emit(hlsMock.MockHls.Events.MANIFEST_PARSED); });
+    expect(playSpy).toHaveBeenCalled();
+    expect(pauseSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('starting')).toHaveTextContent('idle');
+  });
+
+  // 空等攒出的落后量会被 stall 后的 synchronizeToLiveEdge 整段吐回（2026-08-07 实测
+  // 13.4→7.9），1080p 滑窗只有 6s 回不去——运行时自愈：FRAG_CHANGED 上发现主视角
+  // 落后量低于安全线就重新 hold 6s。冻屏观感与首次起播完全一致（同一套「准备中…」）。
+  describe('运行时自愈 hold', () => {
+    const fragAt = (lagSec: number, video: HTMLMediaElement) => ({
+      frag: {
+        url: `${Math.floor(Date.now() / 1000 - lagSec - video.currentTime)}_100.ts`,
+        start: 0,
+      },
+    });
+    const finishStartupHold = async (video: HTMLElement) => {
+      act(() => { video.dispatchEvent(new Event('canplay')); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+      // 播放中：自愈判据要求 !paused，而 jsdom 的 paused 恒为 true
+      Object.defineProperty(video, 'paused', { value: false, configurable: true });
+    };
+
+    it('re-holds for 6s when the main lag collapses after a stall pullback', async () => {
+      render(<Harness sync={mainSync()} />);
+      const hls = await getHls();
+      const video = screen.getByTestId('video') as HTMLMediaElement;
+      await finishStartupHold(video);
+      expect(playSpy).toHaveBeenCalledTimes(1);
+      pauseSpy.mockClear();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); }); // 过冷却
+      act(() => { hls.emit(hlsMock.MockHls.Events.FRAG_CHANGED, fragAt(5, video)); });
+      expect(pauseSpy).toHaveBeenCalled(); // 重新按停
+      expect(screen.getByTestId('starting')).toHaveTextContent('starting');
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+      expect(playSpy).toHaveBeenCalledTimes(2); // 攒满 6 秒重新放行
+      expect(screen.getByTestId('starting')).toHaveTextContent('idle');
+    });
+
+    it('respects the cooldown so a rough CDN cannot freeze the view more than once a minute', async () => {
+      render(<Harness sync={mainSync()} />);
+      const hls = await getHls();
+      const video = screen.getByTestId('video') as HTMLMediaElement;
+      await finishStartupHold(video);
+      pauseSpy.mockClear();
+
+      // release 刚过 30s：还在冷却窗内，哪怕 lag 已经塌了也不动
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      act(() => { hls.emit(hlsMock.MockHls.Events.FRAG_CHANGED, fragAt(5, video)); });
+      expect(pauseSpy).not.toHaveBeenCalled();
+    });
+
+    it('leaves a healthy main stream alone', async () => {
+      render(<Harness sync={mainSync()} />);
+      const hls = await getHls();
+      const video = screen.getByTestId('video') as HTMLMediaElement;
+      await finishStartupHold(video);
+      pauseSpy.mockClear();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      act(() => { hls.emit(hlsMock.MockHls.Events.FRAG_CHANGED, fragAt(13.5, video)); });
+      expect(pauseSpy).not.toHaveBeenCalled();
+    });
+
+    it('never re-holds a paused main view — its lag reading grows meaninglessly while paused', async () => {
+      render(<Harness sync={mainSync()} />);
+      const hls = await getHls();
+      const video = screen.getByTestId('video') as HTMLMediaElement;
+      // 不调 finishStartupHold：保持 jsdom 默认 paused=true 模拟暂停中
+      act(() => { video.dispatchEvent(new Event('canplay')); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+      pauseSpy.mockClear();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      act(() => { hls.emit(hlsMock.MockHls.Events.FRAG_CHANGED, fragAt(5, video)); });
+      expect(pauseSpy).not.toHaveBeenCalled();
+    });
+
+    it('never re-holds a side stream regardless of its lag', async () => {
+      const engine = new SyncEngine();
+      render(<Harness sync={{ engine, id: 'side', isMain: false, tier: '540p' }} />);
+      const hls = await getHls();
+      const video = screen.getByTestId('video') as HTMLMediaElement;
+      Object.defineProperty(video, 'paused', { value: false, configurable: true });
+      pauseSpy.mockClear();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+      act(() => { hls.emit(hlsMock.MockHls.Events.FRAG_CHANGED, fragAt(3, video)); });
+      expect(pauseSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('drops the pending hold on unmount instead of poking a detached element', async () => {
+    const { unmount } = render(<Harness sync={mainSync()} />);
+    await getHls();
+    const video = screen.getByTestId('video');
+
+    act(() => { video.dispatchEvent(new Event('canplay')); });
+    unmount();
+    playSpy.mockClear();
+    pauseSpy.mockClear();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(playSpy).not.toHaveBeenCalled();
+
+    // 监听也得摘干净，否则卸载后的 canplay 还会打在这个元素上
+    act(() => { video.dispatchEvent(new Event('canplay')); });
+    expect(pauseSpy).not.toHaveBeenCalled();
+  });
+
+  it('flags starting for exactly the extra 6s so the black screen has a caption', async () => {
+    render(<Harness sync={mainSync()} />);
+    await getHls();
+    const video = screen.getByTestId('video');
+
+    // 实例创建到首帧之间本就是普通加载态（侧路也有），「准备中…」不该抢先盖上去
+    expect(screen.getByTestId('starting')).toHaveTextContent('idle');
+
+    act(() => { video.dispatchEvent(new Event('canplay')); });
+    expect(screen.getByTestId('starting')).toHaveTextContent('starting');
+    expect(screen.getByTestId('state')).toHaveTextContent('ok');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+    expect(screen.getByTestId('starting')).toHaveTextContent('idle');
+    expect(playSpy).toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ import { MatchTitleBar } from './MatchTitleBar';
 import { SyncControl } from './SyncControl';
 import { sourceForQuality } from '../data/streams';
 
-export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, onPlayingChange, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim }: {
+export function MainStage({ main, quality, titleFallback, matchTitle, messages, showDanmaku, cheerSlot, onSignatureExpired, onPlayingChange, syncEngine, syncOn, onToggleSync, syncTrim, onSyncTrim, onRecalibrate }: {
   main: StreamView;
   quality: QualityLabel;
   titleFallback: string;
@@ -25,6 +25,8 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
   onToggleSync?: () => void;
   syncTrim?: number;
   onSyncTrim?: (sec: number) => void;
+  /** 「重新校准」：清掉实测偏移并立刻重跑一轮，resolve 出重测成功的路数 */
+  onRecalibrate?: () => Promise<number>;
 }) {
   const [muted, setMuted] = useState(true); // 静音起播以满足浏览器自动播放策略；用户点击后解锁音频
   const source = sourceForQuality(main, quality); // 时码同步 tier 按实际源的 label（缺档回退时 ≠ quality）
@@ -35,7 +37,7 @@ export function MainStage({ main, quality, titleFallback, matchTitle, messages, 
           放在一起而不是散在底部控制栏——观赛屏不铺控件带 */}
       <div className="stage-tools">
         {onToggleSync && (
-          <SyncControl on={syncOn ?? true} onToggle={onToggleSync} trim={syncTrim ?? 0} onTrim={onSyncTrim ?? (() => {})} />
+          <SyncControl on={syncOn ?? true} onToggle={onToggleSync} trim={syncTrim ?? 0} onTrim={onSyncTrim ?? (() => {})} onRecalibrate={onRecalibrate} />
         )}
         <button className="mute-btn" onClick={() => setMuted((m) => !m)} aria-label={muted ? '开启声音' : '静音'} aria-pressed={!muted} title={muted ? '点击开启声音' : '静音'}>
           <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>

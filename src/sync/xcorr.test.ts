@@ -24,6 +24,20 @@ function delayed(a: Float32Array, lagSamples: number): Float32Array {
   return b;
 }
 
+/** 类似整流能量包络：正值、带约 100ms 的平滑，而非理想白噪声 */
+function envelope(sampleRate: number, sec: number, seed: number): Float32Array {
+  const raw = noise(sampleRate * sec, seed);
+  const width = Math.round(sampleRate * 0.1);
+  const out = new Float32Array(raw.length);
+  let sum = 0;
+  for (let i = 0; i < raw.length; i++) {
+    sum += Math.abs(raw[i]);
+    if (i >= width) sum -= Math.abs(raw[i - width]);
+    out[i] = sum / Math.min(i + 1, width);
+  }
+  return out;
+}
+
 describe('crossCorrelate', () => {
   it('finds a positive lag when b is a delayed copy of a', () => {
     const a = noise(SR * 4);
@@ -52,5 +66,19 @@ describe('crossCorrelate', () => {
     const b = delayed(a, Math.round(2.5 * SR));
     // 真实偏移 2.5s 超出 ±1s 搜索窗 → 找不到可信峰
     expect(crossCorrelate(a, b, SR, 1)).toBeNull();
+  });
+
+  it('finds 10s of shared audio inside two fully-audible 30s windows', () => {
+    const sr = 200;
+    const a = envelope(sr, 30, 1); // 两边其余 20s 都有声音，但内容互不相同
+    const b = envelope(sr, 30, 2);
+    const common = envelope(sr, 10, 3);
+    // A 的共同段在尾部，B 的共同段在头部：B 相对 A 领先 20s
+    a.set(common, 20 * sr);
+    b.set(common, 0);
+
+    const r = crossCorrelate(a, b, sr, 23);
+    expect(r).not.toBeNull();
+    expect(r!.lagSec).toBeCloseTo(-20, 1);
   });
 });
