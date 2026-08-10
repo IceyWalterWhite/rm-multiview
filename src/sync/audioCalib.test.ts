@@ -51,7 +51,7 @@ function makeStream(
 
 describe('AudioCalibrator', () => {
   let engine: SyncEngine;
-  let setDelta: ReturnType<typeof vi.spyOn>;
+  let setOffset: ReturnType<typeof vi.spyOn>;
   let pcmRegistry: Map<number, Float32Array>;
   let cal: AudioCalibrator;
 
@@ -61,9 +61,16 @@ describe('AudioCalibrator', () => {
     return { sampleRate: SR, channelData: pcm };
   };
 
+  // 校准全程相对主视角，engine 里必须真有一个注册过的主视角才有参照系可言
+  const fakeMedia = () => ({
+    currentTime: 0, playbackRate: 1, paused: false,
+    buffered: { length: 0, end: () => 0 },
+  });
+
   beforeEach(() => {
     engine = new SyncEngine();
-    setDelta = vi.spyOn(engine, 'setDelta');
+    engine.register('main', { video: fakeMedia(), isMain: true, tier: '1080p' });
+    setOffset = vi.spyOn(engine, 'setOffset');
     pcmRegistry = new Map();
     // 隔离存储：默认 storage 是真实 localStorage，会把上个用例持久化的 δ restore 进来
     const store = new Map<string, string>();
@@ -79,7 +86,7 @@ describe('AudioCalibrator', () => {
       isMain: true, tier: '1080p', delta: 0, pcmRegistry,
       segs: Array.from({ length: 6 }, (_, i) => ({ contentStart: i * 2, dur: 2 })),
     });
-    // side：1080p（tier 先验 0），真实 view 常量 2.5s，内容 [0, 15]（3×5s 片）
+    // side：1080p，完整实测 offset 2.5s，内容 [0, 15]（3×5s 片）
     makeStream(cal, 's1', {
       isMain: false, tier: '1080p', delta: 2.5, pcmRegistry,
       segs: Array.from({ length: 3 }, (_, i) => ({ contentStart: i * 5, dur: 5 })),
@@ -87,26 +94,27 @@ describe('AudioCalibrator', () => {
 
     const ok = await cal.calibrate();
     expect(ok).toBe(1);
-    expect(setDelta).toHaveBeenCalledOnce();
-    const [id, view] = setDelta.mock.calls[0] as unknown as [string, number];
+    expect(setOffset).toHaveBeenCalledOnce();
+    const [id, view] = setOffset.mock.calls[0] as unknown as [string, number];
     expect(id).toBe('s1');
     expect(view).toBeCloseTo(2.5, 1);
   });
 
-  it('subtracts the tier prior so a 540p side stream stores only its view constant', async () => {
+  it('stores the whole measured offset, not a tier-adjusted residual', async () => {
     makeStream(cal, 'main', {
       isMain: true, tier: '1080p', delta: 0, pcmRegistry,
       segs: Array.from({ length: 6 }, (_, i) => ({ contentStart: i * 2, dur: 2 })),
     });
-    // 540p：名字钟总偏差 = tier 3.94 + view 0.5 = 4.44
+    // 这一路的名字钟总共比主视角快 4.44s。转码档位占多少、链路占多少，无须区分——
+    // 同步只关心相对偏移，拆开存反而让存档绑死在档位常量上。
     makeStream(cal, 's540', {
       isMain: false, tier: '540p', delta: 4.44, pcmRegistry,
       segs: Array.from({ length: 3 }, (_, i) => ({ contentStart: i * 5, dur: 5 })),
     });
 
     await cal.calibrate();
-    const [, view] = setDelta.mock.calls[0] as unknown as [string, number];
-    expect(view).toBeCloseTo(0.5, 1);
+    const [, offset] = setOffset.mock.calls[0] as unknown as [string, number];
+    expect(offset).toBeCloseTo(4.44, 1);
   });
 
   it('measures through the correlation-lag channel when window starts are offset (判决 lag 通道符号)', async () => {
@@ -123,7 +131,7 @@ describe('AudioCalibrator', () => {
     });
     const ok = await cal.calibrate();
     expect(ok).toBe(1);
-    const [, view] = setDelta.mock.calls[0] as unknown as [string, number];
+    const [, view] = setOffset.mock.calls[0] as unknown as [string, number];
     expect(view).toBeCloseTo(0, 1);
   });
 
@@ -138,7 +146,7 @@ describe('AudioCalibrator', () => {
       segs: Array.from({ length: 3 }, (_, i) => ({ contentStart: 2.5 + i * 5, dur: 5 })),
     });
     await cal.calibrate();
-    const [, view] = setDelta.mock.calls[0] as unknown as [string, number];
+    const [, view] = setOffset.mock.calls[0] as unknown as [string, number];
     expect(view).toBeCloseTo(1.0, 1);
   });
 
@@ -156,7 +164,7 @@ describe('AudioCalibrator', () => {
 
     const ok = await cal.calibrate();
     expect(ok).toBe(0);
-    expect(setDelta).not.toHaveBeenCalled();
+    expect(setOffset).not.toHaveBeenCalled();
   });
 
   it('does nothing without a main stream', async () => {
@@ -184,17 +192,150 @@ describe('AudioCalibrator', () => {
     });
     await calA.calibrate();
 
-    // 同日新会话：从存储恢复，不需要重新校准即写入 engine
+    // 同日新会话：只有主/侧元数据都注册并匹配，存档才可见
     const engine2 = new SyncEngine();
-    const setDelta2 = vi.spyOn(engine2, 'setDelta');
+    engine2.register('main', { video: fakeMedia(), isMain: true, tier: '1080p' });
+    engine2.register('s1', { video: fakeMedia(), isMain: false, tier: '1080p' });
     new AudioCalibrator(engine2, { decode, storage, today: () => '2026-08-02' });
-    expect(setDelta2).toHaveBeenCalledWith('s1', expect.closeTo(2.5, 1));
+    expect(engine2.offsetOf('s1')).toBeCloseTo(2.5, 1);
 
     // 跨日失效
     const engine3 = new SyncEngine();
-    const setDelta3 = vi.spyOn(engine3, 'setDelta');
     new AudioCalibrator(engine3, { decode, storage, today: () => '2026-08-03' });
-    expect(setDelta3).not.toHaveBeenCalled();
+    expect(engine3.offsetOf('s1')).toBeUndefined();
+  });
+
+  // offset_i = delay_i − delay_main，是**相对主视角**的量。存档只记数值不记「相对谁」，
+  // 就会在主视角换档后被原样套用——2026-08-06 现网实测因此整批错约 4.3 秒。
+  describe('参照系身份', () => {
+    const storeOf = () => {
+      const store = new Map<string, string>();
+      return {
+        store,
+        storage: {
+          getItem: (k: string) => store.get(k) ?? null,
+          setItem: (k: string, v: string) => void store.set(k, v),
+        },
+      };
+    };
+    const feedPair = (c: AudioCalibrator, mainTier = '1080p') => {
+      makeStream(c, 'main', {
+        isMain: true, tier: mainTier, delta: 0, pcmRegistry,
+        segs: Array.from({ length: 6 }, (_, i) => ({ contentStart: i * 2, dur: 2 })),
+      });
+      makeStream(c, 's1', {
+        isMain: false, tier: '1080p', delta: 2.5, pcmRegistry,
+        segs: Array.from({ length: 3 }, (_, i) => ({ contentStart: i * 5, dur: 5 })),
+      });
+    };
+
+    it('把主视角与侧路分辨率身份一起存进 profile', async () => {
+      const { store, storage } = storeOf();
+      const c = new AudioCalibrator(engine, { decode, storage, today: () => '2026-08-02' });
+      feedPair(c);
+      await c.calibrate();
+      expect(JSON.parse(store.get('rm.sync.offset.v3')!).profiles)
+        .toHaveProperty(['main|1080p', 's1', '1080p']);
+    });
+
+    it('主视角档位不同的存档整批不予恢复', async () => {
+      const { store, storage } = storeOf();
+      const c = new AudioCalibrator(engine, { decode, storage, today: () => '2026-08-02' });
+      feedPair(c);
+      await c.calibrate();
+
+      // 新会话主视角是 720p：这批数是相对 1080p 测的，套上去整体偏一个档位常量
+      const e2 = new SyncEngine();
+      e2.register('main', { video: fakeMedia(), isMain: true, tier: '720p' });
+      e2.register('s1', { video: fakeMedia(), isMain: false, tier: '1080p' });
+      new AudioCalibrator(e2, { decode, storage, today: () => '2026-08-02' });
+      e2.tick(); // 参照系裁决发生在节拍上（恢复时主视角可能还没注册）
+      expect(e2.offsetOf('s1')).toBeUndefined();
+      void store;
+    });
+
+    it('stores every main/side resolution profile and restores only an exact metadata match', async () => {
+      const { store, storage } = storeOf();
+      const c1080 = new AudioCalibrator(engine, { decode, storage, today: () => '2026-08-02' });
+      feedPair(c1080);
+      await c1080.calibrate();
+
+      const engine720 = new SyncEngine();
+      engine720.register('main', { video: fakeMedia(), isMain: true, tier: '720p' });
+      const c720 = new AudioCalibrator(engine720, { decode, storage, today: () => '2026-08-02' });
+      feedPair(c720, '720p');
+      await c720.calibrate();
+
+      expect(JSON.parse(store.get('rm.sync.offset.v3')!)).toEqual({
+        date: '2026-08-02',
+        profiles: {
+          'main|1080p': { s1: { '1080p': expect.any(Number) } },
+          'main|720p': { s1: { '1080p': expect.any(Number) } },
+        },
+      });
+
+      const restored = new SyncEngine();
+      restored.register('main', { video: fakeMedia(), isMain: true, tier: '1080p' });
+      restored.register('s1', { video: fakeMedia(), isMain: false, tier: '1080p' });
+      new AudioCalibrator(restored, { decode, storage, today: () => '2026-08-02' });
+      expect(restored.offsetOf('s1')).toBeCloseTo(2.5, 1);
+
+      const wrongSideTier = new SyncEngine();
+      wrongSideTier.register('main', { video: fakeMedia(), isMain: true, tier: '1080p' });
+      wrongSideTier.register('s1', { video: fakeMedia(), isMain: false, tier: '540p' });
+      new AudioCalibrator(wrongSideTier, { decode, storage, today: () => '2026-08-02' });
+      expect(wrongSideTier.offsetOf('s1')).toBeUndefined();
+    });
+
+    it('keeps a matching stored offset when a recalibration window is rejected', async () => {
+      const { store, storage } = storeOf();
+      store.set('rm.sync.offset.v3', JSON.stringify({
+        date: '2026-08-02',
+        profiles: { 'main|1080p': { s1: { '1080p': 2.5 } } },
+      }));
+      const e2 = new SyncEngine();
+      e2.register('main', { video: fakeMedia(), isMain: true, tier: '1080p' });
+      e2.register('s1', { video: fakeMedia(), isMain: false, tier: '1080p' });
+      const c = new AudioCalibrator(e2, { decode, storage, today: () => '2026-08-02' });
+      makeStream(c, 'main', {
+        isMain: true, tier: '1080p', delta: 0, pcmRegistry,
+        segs: [{ contentStart: 0, dur: 2 }, { contentStart: 2, dur: 2 }, { contentStart: 4, dur: 2 }],
+      });
+      makeStream(c, 's1', {
+        isMain: false, tier: '1080p', delta: 1, pcmRegistry,
+        segs: [{ contentStart: 0, dur: 5 }],
+      });
+      for (const [k, v] of pcmRegistry) if (k >= 3) pcmRegistry.set(k, new Float32Array(v.length));
+
+      expect(await c.calibrate()).toBe(0);
+      expect(e2.offsetOf('s1')).toBe(2.5);
+    });
+
+    it('ignores v2 storage because it lacks side-resolution metadata', () => {
+      const { store, storage } = storeOf();
+      store.set('rm.sync.offset.v2', JSON.stringify({ date: '2026-08-02', offset: { s1: 2.5 } }));
+      const e2 = new SyncEngine();
+      new AudioCalibrator(e2, { decode, storage, today: () => '2026-08-02' });
+      expect(e2.offsetOf('s1')).toBeUndefined();
+    });
+
+    it('校准途中主视角换档，整轮结果作废', async () => {
+      const { store, storage } = storeOf();
+      const c = new AudioCalibrator(engine, { decode, storage, today: () => '2026-08-02' });
+      feedPair(c);
+      // assemble 要 await 解码；借第一次 decode 模拟用户此刻切了画质
+      let switched = false;
+      const spy = vi.spyOn(engine, 'mainRef');
+      spy.mockImplementation(() => {
+        const r = switched ? 'main|720p' : 'main|1080p';
+        switched = true;
+        return r;
+      });
+
+      expect(await c.calibrate()).toBe(0);
+      expect(setOffset).not.toHaveBeenCalled();
+      expect(store.get('rm.sync.offset.v3')).toBeUndefined();
+    });
   });
 
   // 开赛探针：判据是「FPV 路有没有声音」。赛间实测是数字静音（采样恒为 0），

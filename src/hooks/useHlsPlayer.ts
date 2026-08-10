@@ -16,6 +16,38 @@ const HLS_CONFIG = {
   capLevelToPlayerSize: true, // 若源是多码率 master playlist，小窗不拉满高码率
 };
 
+// 主视角起播前的空等时长。上面的 liveSyncDuration:12 只有侧路吃得下：hls.js 会把它截到 playlist
+// 总时长（dist/hls.js:33761 `min = edge − totalduration`），主视角 3 片×2s=6s 当场被砍成 6，
+// 侧路 3 片×5s=15s 毫发无伤——配置层先天就差 6 秒，这段等待补的正是这个差额。
+// 只能停着等：CDN 只留 6 秒历史，往回 seek 没货；「播着等」同样没用，播放位置与直播边缘同速前进，
+// 两者距离恒定，播多久都不会更落后。等满后主视角落后边缘 ~13.5s，侧路目标随之为 13.5 − 4.5 ≈ 9s，
+// 大于 5s 的分片周期，存货才经得起同步往前推。
+// 2026-08-06 现网三组对照：不等时侧路卡顿 64.5 次/分、全程 1.04 倍速且误差永不收敛（主视角 0 次），
+// 把主视角基准后移 4.5s 后降到 9.3 次/分、误差 0~0.1。同日实测主视角暂停 6 秒期间 currentTime
+// 漂移 0.0000（60 次采样）、readyState 全程 4、hls.js 零位置调整告警——buffer 满时
+// synchronizeToLiveEdge 的 `!withinSlidingWindow && readyState < 4` 不成立，不会被拉回边缘。
+const STARTUP_DELAY_MS = 6_000;
+
+// 空等攒出的落后量不是永久的（2026-08-07 实测两次）：一旦发生 BUFFER_STALL，hls.js 的
+// synchronizeToLiveEdge 会把主视角整段拉回贴边（13.4→7.9、12→5.8），而 1080p 的 CDN 滑窗
+// 只有 6 秒，被拉回后旧内容已不存在，「播着追」物理上不可能——唯一的回法是再停 6 秒重新攒。
+// 于是把起播空等升级成运行时自愈：FRAG_CHANGED 上探测主视角落后量，低于安全线就重新 hold。
+// 安全线 10s：正常态 ~13.5s（裕量 3.5s 吃得下名字钟 1s 分辨率的抖动），回拉后 ~6-8s 必触发；
+// 侧路要安全需要 lag_main − offset(~4) ≥ 7，即 lag_main ≥ 11，10 是它的下沿。
+// 冷却 60s 防振荡：CDN 持续糟糕反复 stall 时，最坏也只每分钟冻一次。
+const REHOLD_BELOW_LAG = 10;
+const REHOLD_COOLDOWN_MS = 60_000;
+
+// 回拉的对因治疗：主视角在 lag≈13.5s 的体位下，播放位置永远在自己 6 秒 CDN 滑窗之外，
+// hls.js 视之为异常态——readyState 掉到 4 以下的任何瞬间，synchronizeToLiveEdge 都会把
+// 位置整段没收回贴边（2026-08-07 实测 13.4→7.9，下午高码率场次里发生得「挺平常」）。
+// 全局 maxBufferLength:8 意味着任何超过 8 秒的供片抖动都会击穿 readyState。主视角单独
+// 加厚：30s 上限让 hls.js 把到 edge 为止的全部已发布片都囤下（实际可攒 ~13.5s 存货），
+// 抖动容忍从 8s 升到 13s+，回拉失去触发条件，自愈 hold 退居断网级兜底。
+// 代价只有主视角一路的内存（1080p 多囤几秒，约 +15~25MB）；带宽零增量——片总量不变，
+// 只是提前下载。侧路不加：它们的痛点是「跳不回去」而非「被拉走」，白囤 10 路×20MB。
+const MAIN_BUFFER_CONFIG = { maxBufferLength: 30, maxMaxBufferLength: 40 };
+
 /** 时码同步注册信息：engine 引用稳定，随 hls 生命周期注册/注销 */
 export interface SyncBinding {
   engine: SyncEngine;
@@ -57,6 +89,8 @@ export function useHlsPlayer(
 ) {
   const keepAliveWhenHidden = options.keepAliveWhenHidden ?? false;
   const [error, setError] = useState(false);
+  // 空等那 6 秒主视角是纯黑屏，不给话说就跟播挂了没区别
+  const [starting, setStarting] = useState(false);
   const hasStartedRef = useRef(false);
   // 最新回调放 ref，避免把 onSignatureExpired 放进 effect 依赖（否则父级每次渲染都重建 11 路 hls）
   const onExpiredRef = useRef(onSignatureExpired);
@@ -71,6 +105,7 @@ export function useHlsPlayer(
     if (!video || !src) return;
     hasStartedRef.current = false;
     setError(false);
+    setStarting(false);
 
     // 原生 HLS 兜底（拿不到 HTTP 状态码，错误只能粗粒度处理；时码同步在此路径不可用）
     const setupNative = (): (() => void) => {
@@ -180,6 +215,7 @@ export function useHlsPlayer(
       const config = sync
         ? {
             ...HLS_CONFIG,
+            ...(sync.isMain ? MAIN_BUFFER_CONFIG : null),
             fLoader: makeTeeLoader(
               Hls.DefaultConfig.loader as never,
               (url, data) => sync.engine.pushBytes(sync.id, data, url),
@@ -187,6 +223,49 @@ export function useHlsPlayer(
           }
         : HLS_CONFIG;
       const hls = new Hls(config);
+
+      // 判据是 sync.isMain 而不是「本路还没起播过」：每 new 一个 Hls 实例都必然重新落在 edge−6，
+      // 不重等就前功尽弃；而普通断线自愈走的是 hls.startLoad() 原地恢复，根本不经过这段代码，
+      // 所以不会有「每次重连都黑 6 秒」。（顺带：此处写 !hasStartedRef.current 等于没写——
+      // effect 开头就把它清成 false，异步分支跑到这里时它恒为 true。）
+      // 侧路一个都不许跟着延迟：它们本就起播在 edge−12，再退 6 秒同步就得往前推 9 秒，
+      // 而 maxBufferLength:8 让它们压根跳不回来。
+      let holding = sync?.isMain === true;
+      let holdTimer: ReturnType<typeof setTimeout> | null = null;
+      // 自愈 hold 的冷却锚点。初值 0 = 起播那次 hold 之前不受冷却约束（本来也轮不到自愈触发）
+      let lastReleaseAt = 0;
+      const clearHoldTimer = () => {
+        if (holdTimer === null) return;
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      };
+      const releaseHold = () => {
+        holding = false;
+        lastReleaseAt = Date.now();
+        clearHoldTimer();
+        setStarting(false);
+        if (!isPageHidden() || keepAliveWhenHidden || !hasStartedRef.current) playVideo(video);
+      };
+      // canplay 与 play 谁先到算谁。只认 play 不保险：主视角的 muted 由外部传入，未静音时
+      // 浏览器的自动播放策略可能直接拒绝，play 事件永不触发，定时器就永远起不来。
+      // canplay（首帧可播）不看自动播放许可，是「本该开播的那一刻」的可靠代理。
+      const onHoldTick = () => {
+        if (!holding) return;
+        video.pause(); // 计时期间 autoPlay / MSE 每次偷跑都在这里被按回去
+        if (holdTimer !== null) return;
+        setStarting(true);
+        holdTimer = setTimeout(() => {
+          holdTimer = null;
+          releaseHold();
+        }, STARTUP_DELAY_MS);
+      };
+      if (holding) {
+        // 必须赶在 attachMedia 之前挂上：VideoPlayer 的 <video autoPlay> 会在数据就绪时自作主张开播，
+        // 光「不主动调 play()」拦不住它，晚一步注册就可能被抢跑。
+        video.addEventListener('canplay', onHoldTick);
+        video.addEventListener('play', onHoldTick);
+      }
+
       hls.loadSource(src);
       hls.attachMedia(video);
 
@@ -197,10 +276,26 @@ export function useHlsPlayer(
           const frag = (data as { frag?: { url?: string; start?: number } }).frag;
           if (!frag?.url || typeof frag.start !== 'number') return;
           const name = parseFragName(frag.url);
-          if (name) sync.engine.onFrag(sync.id, { wallSec: name.wallSec, fragStart: frag.start });
+          if (!name) return;
+          sync.engine.onFrag(sync.id, { wallSec: name.wallSec, fragStart: frag.start });
+          // 运行时自愈：stall 后被 synchronizeToLiveEdge 拉回贴边的主视角，落后量在这里
+          // 被逮住并重新攒起。单样本名字钟（±1s）够用——阈值离正常态有 3.5s 裕量，
+          // 且 1080p 每 2s 就有下一发样本纠错，误触还有 60s 冷却兜底。
+          // 主视角暂停中（页面隐藏等）不触发：lag 读数会随暂停无限增长，无意义。
+          if (
+            sync.isMain &&
+            !holding &&
+            !video.paused &&
+            Date.now() - lastReleaseAt > REHOLD_COOLDOWN_MS &&
+            Date.now() / 1000 - (name.wallSec - frag.start + video.currentTime) < REHOLD_BELOW_LAG
+          ) {
+            holding = true;
+            onHoldTick(); // 直接踢：video 已在播，不会再有 canplay 来代劳
+          }
         });
       }
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (holding) return; // 计时未满就开播 = 白等，落后量当场缩回 6 秒
         if (!isPageHidden() || keepAliveWhenHidden || !hasStartedRef.current) playVideo(video);
       });
 
@@ -291,6 +386,10 @@ export function useHlsPlayer(
 
       teardown = () => {
         clearExpiryRetry();
+        holding = false;
+        clearHoldTimer();
+        video.removeEventListener('canplay', onHoldTick);
+        video.removeEventListener('play', onHoldTick);
         document.removeEventListener('visibilitychange', onVisibilityChange);
         video.removeEventListener('playing', onRecovered);
         unregisterSync?.();
@@ -305,5 +404,6 @@ export function useHlsPlayer(
     };
   }, [videoRef, src, keepAliveWhenHidden]); // src 变化（换清晰度 / 换签名）→ 重建
 
-  return { error };
+  // starting 只由 hls.js 分支的主视角空等置起；原生兜底路径与不带 sync 的场景恒为 false
+  return { error, starting };
 }

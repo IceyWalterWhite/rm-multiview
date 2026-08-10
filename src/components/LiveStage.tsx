@@ -54,6 +54,8 @@ export function LiveStage(p: Props) {
     return Number.isFinite(v) ? Math.max(-5, Math.min(5, v)) : 0;
   });
   const handleTrim = useCallback((sec: number) => setSyncTrim(sec), []);
+  // 成功测出的路原子更新；本轮无可靠峰的路继续沿用元数据完全匹配的旧实测值。
+  const handleRecalibrate = useCallback(() => calibrator.calibrate(), [calibrator]);
   useEffect(() => {
     syncEngine.setTrim(syncTrim);
     localStorage.setItem(TRIM_KEY, String(syncTrim));
@@ -148,7 +150,7 @@ export function LiveStage(p: Props) {
     <section className="live-stage" aria-label="直播视角">
       <div className="stage-row" ref={rowRef}>
         <SideColumn side="red" views={p.catalog.redViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
-        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} />
+        <MainStage main={p.catalog.main} quality={p.mainQuality} titleFallback={`${p.catalog.zoneName} · 主视角`} matchTitle={matchTitle} messages={p.messages} showDanmaku={danmakuOn} cheerSlot={p.cheerSlot} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} syncOn={syncOn} onToggleSync={toggleSync} syncTrim={syncTrim} onSyncTrim={handleTrim} onRecalibrate={handleRecalibrate} />
         <SideColumn side="blue" views={p.catalog.blueViews} quality={p.multiQuality} stacks={stacks} onToggle={toggle} onSignatureExpired={p.onSignatureExpired} syncEngine={syncEngine} />
         {tooNarrow && <div className="stage-cover">请在大屏幕上观看</div>}
       </div>

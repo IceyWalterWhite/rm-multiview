@@ -20,11 +20,14 @@ export const VideoPlayer = memo(function VideoPlayer({ src, muted = true, classN
   const sync = syncEngine && syncId
     ? { engine: syncEngine, id: syncId, isMain: syncIsMain, tier: syncTier }
     : undefined;
-  const { error } = useHlsPlayer(ref, src, onSignatureExpired, { keepAliveWhenHidden, sync });
+  const { error, starting } = useHlsPlayer(ref, src, onSignatureExpired, { keepAliveWhenHidden, sync });
   return (
     <div className="video-wrap">
       <video ref={ref} className={className} muted={muted} playsInline autoPlay />
-      {error && <div className="video-retry">信号中断 · 重连中…</div>}
+      {/* error 压过 starting：起播空等只是「慢」，断流是「坏」，同时为真时用户该看到后者 */}
+      {error
+        ? <div className="video-retry">信号中断 · 重连中…</div>
+        : starting ? <div className="video-retry">准备中…</div> : null}
     </div>
   );
 });
